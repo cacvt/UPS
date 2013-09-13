@@ -24,10 +24,10 @@ extern "C" {
 //---------------------------------------------------------------------------
 // User To Select Target Device:
 
-#define   DSP28_28346   TARGET
+#define   DSP28_28346   0
 #define   DSP28_28345   0
 #define   DSP28_28344   0
-#define   DSP28_28343   0
+#define   DSP28_28343   TARGET
 #define   DSP28_28342   0
 #define   DSP28_28341   0
 #define	  DSP28_2834F	0
