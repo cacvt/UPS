@@ -4,7 +4,7 @@
  *  Created on: Sep 12, 2013
  *      Author: shenzy
  */
-#define __HW_ADC_C__
+#define __ADC_C__
 #include "device.h"
 #include "hw_adc_constants.h"
 #include "hw_adc.h"
@@ -32,7 +32,7 @@ void adc_soc_isr(void);
  * Public variable definitions
  ******************************************************************************/
 #pragma SET_DATA_SECTION("adcdata")     /* Put adc data into dedicated RAM for DMA efficiency */
-Uint16 adc_res[2][6];
+int16 adc_res[2][6];
 float adc_val[2][6];
 #pragma SET_DATA_SECTION(".ebss")       /* Restore data section assignment */
 
@@ -50,6 +50,7 @@ void HW_adc_init(void)
 
 void HW_adc_scale(void)
 {
+	int tmp;
     adc_val[0][0] = (float)(adc_res[0][0]<<4) * ADC_FS[0][0] - ADC_OS[0][0];
     adc_val[0][1] = (float)(adc_res[0][1]<<4) * ADC_FS[0][1] - ADC_OS[0][1];
     adc_val[0][2] = (float)(adc_res[0][2]<<4) * ADC_FS[0][2] - ADC_OS[0][2];
@@ -65,7 +66,7 @@ void HW_adc_scale(void)
 
 }
 
-void HW_adc_set_isr(ISR_FUNC func)
+void HW_adc_set_isr(CTRL_ISR_FUNC func)
 {
     EALLOW;
     PieVectTable.DINTCH2 = func;
@@ -95,31 +96,31 @@ void adc_init_dma(void)
     SysCtrlRegs.PCLKCR3.bit.DMAENCLK = 1;                   /* Enable clock of DMA module */
 
     GpioIntRegs.GPIOXINT3SEL.all = 2;                       /* Use GPIO34 as XINT3 to trigger DMA */
-    XIntruptRegs.XINT3CR.bit.POLARITY = 2;                  /* Interrupt on falling edge */
+    XIntruptRegs.XINT3CR.bit.POLARITY = 0;                  /* Interrupt on falling edge */
     XIntruptRegs.XINT3CR.bit.ENABLE = 1;                    /* Interrupt is enabled */
 
-    DmaRegs.PRIORITYCTRL1.bit.CH1PRIORITY = 1;              /* CH1 high pripority mode */
+    DmaRegs.PRIORITYCTRL1.bit.CH1PRIORITY = 0;              /* CH1 high priority mode */
 
     DmaRegs.CH1.SRC_BEG_ADDR_SHADOW = (Uint32)ADC1_REG;     /* Point to beginning of source buffer */
     DmaRegs.CH1.SRC_ADDR_SHADOW =     (Uint32)ADC1_REG;     /* Point to beginning of source buffer */
-    DmaRegs.CH1.DST_BEG_ADDR_SHADOW = (Uint32)adc_res[0];     /* Point to beginning of destination buffer */
-    DmaRegs.CH1.DST_ADDR_SHADOW =     (Uint32)adc_res[0];
-    DmaRegs.CH2.SRC_BEG_ADDR_SHADOW = (Uint32)ADC1_REG;     /* Point to beginning of source buffer */
-    DmaRegs.CH2.SRC_ADDR_SHADOW =     (Uint32)ADC1_REG;     /* Point to beginning of source buffer */
-    DmaRegs.CH2.DST_BEG_ADDR_SHADOW = (Uint32)adc_res[1];     /* Point to beginning of destination buffer */
-    DmaRegs.CH2.DST_ADDR_SHADOW =     (Uint32)adc_res[1];
-    DmaRegs.CH1.BURST_SIZE.all = 1;                         /* 2 (n+1) words per burst */
+    DmaRegs.CH1.DST_BEG_ADDR_SHADOW = (Uint32)(adc_res[0]+2);     /* Point to beginning of destination buffer */
+    DmaRegs.CH1.DST_ADDR_SHADOW =     (Uint32)(adc_res[0]+2);
+    DmaRegs.CH2.SRC_BEG_ADDR_SHADOW = (Uint32)ADC2_REG;     /* Point to beginning of source buffer */
+    DmaRegs.CH2.SRC_ADDR_SHADOW =     (Uint32)ADC2_REG;     /* Point to beginning of source buffer */
+    DmaRegs.CH2.DST_BEG_ADDR_SHADOW = (Uint32)(adc_res[1]+2);     /* Point to beginning of destination buffer */
+    DmaRegs.CH2.DST_ADDR_SHADOW =     (Uint32)(adc_res[1]+2);
+    DmaRegs.CH1.BURST_SIZE.all = 1;                         /* n+1 words per burst */
     DmaRegs.CH1.SRC_BURST_STEP = 0;                         /* ADC register is at fixed address */
-    DmaRegs.CH1.DST_BURST_STEP = 1;                         /* Increment dest addr between each word x-ferred */
+    DmaRegs.CH1.DST_BURST_STEP = 3;                         /* Increment dest addr between each word x-ferred */
     DmaRegs.CH1.TRANSFER_SIZE = 2;                          /* Number of bursts per transfer, DMA interrupt will occur after completed transfer */
-    DmaRegs.CH2.BURST_SIZE.all = 1;                         /* 2 (n+1) words per burst */
+    DmaRegs.CH2.BURST_SIZE.all = 1;                         /* n+1 words per burst */
     DmaRegs.CH2.SRC_BURST_STEP = 0;                         /* ADC register is at fixed address */
-    DmaRegs.CH2.DST_BURST_STEP = 1;                         /* Increment dest addr between each word x-ferred */
+    DmaRegs.CH2.DST_BURST_STEP = 3;                         /* Increment dest addr between each word x-ferred */
     DmaRegs.CH2.TRANSFER_SIZE = 2;                          /* Number of bursts per transfer, DMA interrupt will occur after completed transfer */
     DmaRegs.CH1.SRC_TRANSFER_STEP = 0x0000;                 /* ADC register is at fixed address */
-    DmaRegs.CH1.DST_TRANSFER_STEP = 0x0001;                 /* Move to next address after burst */
+    DmaRegs.CH1.DST_TRANSFER_STEP = 0xFFFC;                 /* Move to next address after burst */
     DmaRegs.CH2.SRC_TRANSFER_STEP = 0x0000;                 /* ADC register is at fixed address */
-    DmaRegs.CH2.DST_TRANSFER_STEP = 0x0001;                 /* Move to next address after burst */
+    DmaRegs.CH2.DST_TRANSFER_STEP = 0xFFFC;                 /* Move to next address after burst */
     DmaRegs.CH1.SRC_WRAP_SIZE = 0xFFFF;                     /* Larger than TRANSFER_STEP to disable WRAP */
     DmaRegs.CH1.SRC_WRAP_STEP = 0x0000;                     /* Do not care */
     DmaRegs.CH1.DST_WRAP_SIZE = 0xFFFF;                     /* Larger than TRANSFER_STEP to disable WRAP */
@@ -132,15 +133,15 @@ void adc_init_dma(void)
     DmaRegs.CH2.MODE.bit.PERINTSEL = DMA_XINT3;             /* Use XINT3 to trigger DMA transfer */
     DmaRegs.CH1.MODE.bit.PERINTE = PERINT_ENABLE;           /* Peripheral interrupt triggering enable */
     DmaRegs.CH2.MODE.bit.PERINTE = PERINT_ENABLE;           /* Peripheral interrupt triggering enable */
-    DmaRegs.CH1.MODE.bit.ONESHOT = ONESHOT_DISABLE;         /* Oneshot mode disabled */
-    DmaRegs.CH2.MODE.bit.ONESHOT = ONESHOT_DISABLE;         /* Oneshot mode disabled */
+    DmaRegs.CH1.MODE.bit.ONESHOT = ONESHOT_ENABLE;          /* Oneshot mode disabled */
+    DmaRegs.CH2.MODE.bit.ONESHOT = ONESHOT_ENABLE;          /* Oneshot mode disabled */
     DmaRegs.CH1.MODE.bit.CONTINUOUS = CONT_ENABLE;          /* Continous mode enabled */
     DmaRegs.CH2.MODE.bit.CONTINUOUS = CONT_ENABLE;          /* Continous mode enabled */
     DmaRegs.CH1.MODE.bit.DATASIZE = SIXTEEN_BIT;            /* date size is set to 16-bits */
     DmaRegs.CH2.MODE.bit.DATASIZE = SIXTEEN_BIT;            /* date size is set to 16-bits */
 
     DmaRegs.CH1.CONTROL.bit.RUN = 1;                        /* Start DMA channel 1 */
-    DmaRegs.CH2.CONTROL.bit.RUN = 1;                        /* Start DMA channel 1 */
+    DmaRegs.CH2.CONTROL.bit.RUN = 1;                        /* Start DMA channel 2 */
     EDIS;
 }
 
@@ -179,10 +180,6 @@ void adc_init_io(void)
     EPwm1Regs.ETPS.bit.SOCAPRD = ET_1ST;
     EPwm1Regs.ETPS.bit.SOCBPRD = ET_1ST;
 
-    /* Enable SOC generation */
-	EPwm1Regs.ETSEL.bit.SOCAEN = 1;
-	EPwm1Regs.ETSEL.bit.SOCBEN = 1;
-
     // Set ExtSOC  polarity
     SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1APOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
     SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1BPOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
@@ -193,7 +190,7 @@ void adc_init_io(void)
 
     /* Set HSPCLK to 50M to generate SOC width of 640ns
      * SOC width is 32 cyc of HSPCLK */
-    SysCtrlRegs.HISPCP.bit.HSPCLK = 0x7;
+    SysCtrlRegs.HISPCP.bit.HSPCLK = 3;//0x7;
 
     /* Set GPIO34 as input to access BUSY signal */
     GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;    // 0=GPIO,
@@ -205,15 +202,6 @@ void adc_init_io(void)
 void adc_init_isr()
 {
     EALLOW;
-
-    /* Setup DMA CH1 interrupt to clear ePWM1 SOC generation when a SOC is generated
-     * SOC generation is re-enabled at the last PWM ISR in a control cycle */
-    DmaRegs.CH1.MODE.bit.CHINTMODE = CHINT_BEGIN;   /* Interrupt at the end of transfer */
-    DmaRegs.CH1.MODE.bit.CHINTE = CHINT_ENABLE;     /* Channel Interrupt to CPU enable */
-    DmaRegs.CH1.CONTROL.bit.PERINTCLR = 1;          /* Clear any spurious interrupt flags */
-    PieVectTable.DINTCH1 = adc_soc_isr;             /* ISR to disable ePWM1 SOC generation */
-    PieCtrlRegs.PIEIER7.bit.INTx1 = 1;              /* Enable interrupt DINTCH1 in PIE */
-
 
     /* Setup DMA CH2 interrupt for control
      * ISR function is given later by HW_adc_set_isr function call */
@@ -230,22 +218,12 @@ void adc_init_isr()
 
 void adc_init_reg(void)
 {
-
-    Uint16 tmp;
-    // Setup Vref
     /* Reset devices */
     *ADC1_REG = 0x105;
     *ADC2_REG = 0x105;
 
-    /* Setup VRef value read */
-    *ADC1_REG = 0x103;
-    *ADC2_REG = 0x103;
-
-    /* Dummy read */
-    tmp = *ADC1_REG;
-    tmp = *ADC2_REG;
-
-    /* Setup VRef value write */
+    /* Setup Vref */
+    /* Setup next access to Vfef value write */
     *ADC1_REG = 0x101;
     *ADC2_REG = 0x101;
 
@@ -253,31 +231,16 @@ void adc_init_reg(void)
     *ADC1_REG = 0x266;
     *ADC2_REG = 0x266;
 
-    /* Setup VRef value read */
-    *ADC1_REG = 0x103;
-    *ADC2_REG = 0x103;
-
-    /* Dummy read */
-    tmp = *ADC1_REG;
-    tmp = *ADC2_REG;
-
     /* Setup sequencer */
-    /* Setup sequencer write*/
+    /* Setup next access to sequencer write*/
     *ADC1_REG = 0x104;
     *ADC2_REG = 0x104;
 
     /* Configure sequencer */
     // Setup SEQUENCER to convert pseudo-diff mode in the following sequence:
     // Convert CH(A/B)0+, on single CONVERT and BUSY for entire sequence (though only one in sequence anyway)
-    *ADC1_REG = 0xB24;
-    *ADC2_REG = 0xB24;
-    /* Setup sequencer readback*/
-    *ADC1_REG = 0x106;
-    *ADC2_REG = 0x106;
-
-    /* Dummy read */
-    tmp = *ADC1_REG;
-    tmp = *ADC2_REG;
+    *ADC1_REG = 0xF24;
+    *ADC2_REG = 0xF24;
 }
 
 void adc_init_xintf(void)

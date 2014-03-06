@@ -4,7 +4,7 @@
 ;        Created on: 9/24/2013
 ;  Last modified on: 9/24/2013
 ;
-	.cdecls   C, LIST, "device.h", "hw_adc.h"
+	.cdecls   C, LIST, "..\include\device.h", "..\include\hw_adc.h"
 
 	.def _adc_soc_isr
 
