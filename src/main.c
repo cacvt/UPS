@@ -11,6 +11,7 @@
  ******************************************************************************/
 unsigned long long tick;
 /* for debug only */
+long long spi_tick;
 volatile int tmp;
 volatile int res1, res2;
 volatile long cyc[1000];
@@ -28,6 +29,9 @@ void main(void)
 	HW_init();						/* Initialize hardware*/
 	HW_set_ctrl_isr(ctrl_isr);      /* Set control ISR */
 	HW_dac_update_all(0);
+
+	spi_tick = 0;
+
 	DELAY_US(1000);
 	tmp=20000;
 	ptr = 0;
@@ -45,7 +49,9 @@ void main(void)
 void main_loop(void)
 {
     do {
-    	if( tick >= next) {
+    	if( tick >= spi_tick) {
+    		while (spi_tick < tick)
+    			spi_tick += 10;
 
     	}
     	ams(" NOP");
