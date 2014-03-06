@@ -37,7 +37,7 @@ extern "C" {
 #define DMA_TINT2   13
 #define DMA_MXEVTA  14
 #define DMA_MREVTA  15
-#define DMA_MXREVTB 16
+#define DMA_MXEVTB  16
 #define DMA_MREVTB  17
 // OVERINTE bit
 #define	OVRFLOW_DISABLE	0x0

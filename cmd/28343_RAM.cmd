@@ -40,7 +40,7 @@ PAGE 0 :
    BEGIN        : origin = 0x000000, length = 0x000002     /* Boot to M0 will go here                      */
 
    RAMM0        : origin = 0x000052, length = 0x0003AE
-   RAML0        : origin = 0x008000, length = 0x002000
+   RAML0H       : origin = 0x008100, length = 0x001F00
    RAML1        : origin = 0x00A000, length = 0x002000
    ZONE7A       : origin = 0x200000, length = 0x00FC00    /* XINTF zone 7 - program space */
    RAMH0        : origin = 0x300000, length = 0x008000
@@ -61,6 +61,7 @@ PAGE 1 :
 
    BOOT_RSVD    : origin = 0x000002, length = 0x000050     /* Part of M0, BOOT rom will use this for stack */
    RAMM1        : origin = 0x000400, length = 0x000400     /* on-chip RAM block M1 */
+   RAML0L       : origin = 0x008000, length = 0x000100
    RAML2        : origin = 0x00C000, length = 0x002000
    RAML3        : origin = 0x00E000, length = 0x002000
    RAML4        : origin = 0x010000, length = 0x002000
@@ -77,16 +78,18 @@ SECTIONS
       The codestart section (found in DSP28_CodeStartBranch.asm)
       re-directs execution to the start of user code.  */
    codestart        : > BEGIN,     PAGE = 0
-   ramfuncs         : > RAML0,     PAGE = 0
+   ramfuncs         : > RAML0H,     PAGE = 0
    .text            : > RAML1,     PAGE = 0
-   .cinit           : > RAML0,     PAGE = 0
-   .pinit           : > RAML0,     PAGE = 0
-   .switch          : > RAML0,     PAGE = 0
+   .cinit           : > RAML0H,     PAGE = 0
+   .pinit           : > RAML0H,     PAGE = 0
+   .switch          : > RAML1,     PAGE = 0
 
    .stack           : > RAMM1,     PAGE = 1
    .ebss            : > RAML2,     PAGE = 1
    .econst          : > RAML3,     PAGE = 1
    .esysmem         : > RAMM1,     PAGE = 1
+
+   adcdata			: > RAML0L,	   PAGE = 1
 
    IQmath           : > RAML1,     PAGE = 0
    IQmathTables     : > IQTABLES,  PAGE = 0, TYPE = NOLOAD

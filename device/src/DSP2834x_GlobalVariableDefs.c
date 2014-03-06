@@ -11,7 +11,7 @@
 // $Release Date: March 2011 $
 //###########################################################################
 
-#include "DSP2834x_Device.h"     // DSP2834x Headerfile Include File
+#include "..\include\DSP2834x_Device.h"     // DSP2834x Headerfile Include File
 
 //---------------------------------------------------------------------------
 // Define Global Peripheral Variables:
