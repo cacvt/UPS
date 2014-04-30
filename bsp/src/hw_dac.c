@@ -29,7 +29,7 @@ void HW_dac_init(void)
 	EALLOW;
 
 	/* McBSP initialization */
-	SysCtrlRegs.PCLKCR0.bit.MCBSPBENCLK = 1;							/* Enable clock for McBSPa */
+	SysCtrlRegs.PCLKCR0.bit.MCBSPBENCLK = 1;							/* Enable clock for McBSPB */
 	SysCtrlRegs.LOSPCP.bit.LSPCLK = 0;									/* LSPCLK = SYSCLK (200 MHz)*/
 
 	McbspbRegs.SPCR2.all = 0x0000;										/* Reset FS generator, sample rate generator & transmitter */

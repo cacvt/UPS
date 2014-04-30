@@ -10,14 +10,22 @@
 #ifndef __HW_SPI_H__
 #define __HW_SPI_H__
 
-typedef interrupt void(*ISR_FUNC)(void);
+#include "device.h"
 
+//==============================================================================
+// Type definition
+struct SPI {
+	int ph;
+};
+
+//==============================================================================
+// Public function declaration
 void HW_spi_init(void);
 
 
-/* Export globale variables defined in the c file */
+//==============================================================================
+// Public variables declaration
 #ifndef __HW_SPI_C__
 #endif /* __HW_SPI_C__ */
-
 
 #endif /* __HW_SPI_H__ */

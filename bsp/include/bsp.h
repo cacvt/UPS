@@ -12,10 +12,13 @@
 #include "profile.h"
 #include "hw_sys.h"
 #include "hw_adc.h"
-#include "hw_pwm.h"
+#include "hw_ethernet.h"
+#include "hw_CC_LED.h"
+#include "hw_cpld.h"
 #include "hw_dac.h"
 #include "hw_modulator.h"
-#include "hw_ethernet.h"
+#include "hw_pwm.h"
+#include "hw_spi.h"
 
 /*******************************************************************************
  * Public functions declarations
@@ -26,7 +29,7 @@ void HW_init(void);
 
 #ifdef __HW_ADC_H__
 
-void HW_set_ctrl_isr(ISR_FUNC func);
+void HW_set_ctrl_isr(CTRL_ISR_FUNC func);
 
 #endif /* __HW_ADC_H__ */
 

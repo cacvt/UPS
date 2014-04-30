@@ -4,7 +4,7 @@
  *  Created on: Sep 12, 2013
  *      Author: shenzy
  */
-#define __ADC_C__
+#define __HW_ADC_C__
 #include "device.h"
 #include "hw_adc_constants.h"
 #include "hw_adc.h"
