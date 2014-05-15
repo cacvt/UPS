@@ -30,15 +30,15 @@ void HW_cpld_init(void)
 	McbspaRegs.SPCR1.all = 0x1080;		// Reset Receiver, Right justify word, Digital loopback disables.
 
 	McbspaRegs.PCR.all = 0x0F0F;        // (CLKXM=CLKRM=FSXM=FSRM= 1, FSXP = FSRP = 1)
-	//McbspaRegs.SPCR1.bit.CLKSTP = 2;    // Together with CLKXP/CLKRP determines clocking scheme
-	//McbspaRegs.PCR.bit.CLKXP = 1;		// Clock stop mode, transfer on falling edge			*/
-	//McbspaRegs.PCR.bit.CLKRP = 1;		// receiving on rising edge (doesn't matter )			*/
+	McbspaRegs.SPCR1.bit.CLKSTP = 2;    // Together with CLKXP/CLKRP determines clocking scheme
+	McbspaRegs.PCR.bit.CLKXP = 1;		// Clock stop mode, transfer on falling edge			*/
+	McbspaRegs.PCR.bit.CLKRP = 1;		// receiving on rising edge (doesn't matter )			*/
 	McbspaRegs.RCR2.all = 0xA1;			// FSX setup time 1 in master mode
 	McbspaRegs.XCR2.all = 0xA0;			// FSX setup time 1 in master mode
 	McbspaRegs.RCR1.all = 0xA0;			// 32-bit word
 	McbspaRegs.XCR1.all = 0xA0;			// 32-bit word
 	McbspaRegs.SRGR2.all = 0x2000;										// CLKSM=1, FPER = 1 CLKG periods
-	McbspaRegs.SRGR1.all = 0x4;											// Frame Width = 1 CLKG period, CLKGDV=4 (XCLK = LSPCLK/5)
+	McbspaRegs.SRGR1.all = 0x5;											// Frame Width = 1 CLKG period, CLKGDV=5 (XCLK = LSPCLK/6)
 	DELAY_US(1.0E7/CPU_FREQ);											// Delay 2 McBSP clock cycle
 	McbspaRegs.SPCR2.bit.GRST=1;										// Enable the sample rate generator
 	DELAY_US(1.0E7/CPU_FREQ);											// Delay 2 McBSP clock cycle
@@ -99,6 +99,12 @@ void HW_cpld_init(void)
 	GpioCtrlRegs.GPBDIR.bit.GPIO48 = 1;		// As output
 	GpioCtrlRegs.GPBPUD.bit.GPIO48 = 1;		// Disable pull-up to save power
 	GpioDataRegs.GPBSET.bit.GPIO48 = 1;		// Set high to send MFSXA to SPI_CS
+
+	// Set GPIO49 as reset for CPLD
+	GpioCtrlRegs.GPBMUX2.bit.GPIO49 = 0;	// GPIO48 as IO
+	GpioCtrlRegs.GPBDIR.bit.GPIO49 = 1;		// As output
+	GpioCtrlRegs.GPBPUD.bit.GPIO49 = 1;		// Disable pull-up to save power
+	GpioDataRegs.GPBSET.bit.GPIO49 = 1;		// Set high
 	EDIS;
 
 }
