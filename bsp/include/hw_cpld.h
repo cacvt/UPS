@@ -19,6 +19,7 @@
 //==============================================================================
 // Public function declaration
 void HW_cpld_init(void);
+void HW_cpld_reset(void);
 void HW_cpld_reg_write_poll(unsigned int addr, unsigned int data);
 unsigned int HW_cpld_reg_read_poll(unsigned int addr);
 

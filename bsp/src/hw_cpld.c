@@ -104,11 +104,17 @@ void HW_cpld_init(void)
 	GpioCtrlRegs.GPBMUX2.bit.GPIO49 = 0;	// GPIO48 as IO
 	GpioCtrlRegs.GPBDIR.bit.GPIO49 = 1;		// As output
 	GpioCtrlRegs.GPBPUD.bit.GPIO49 = 1;		// Disable pull-up to save power
-	GpioDataRegs.GPBSET.bit.GPIO49 = 1;		// Set high
 	EDIS;
 
+	HW_cpld_reset();
 }
 
+void HW_cpld_reset(void)
+{
+	GpioDataRegs.GPBCLEAR.bit.GPIO49 = 1;	// Set low
+	DELAY_US(1);
+	GpioDataRegs.GPBSET.bit.GPIO49 = 1;		// Set high
+}
 void HW_cpld_reg_write_poll(unsigned int addr, unsigned int data)
 {
 	while(McbspaRegs.SPCR2.bit.XRDY == 0) {};
