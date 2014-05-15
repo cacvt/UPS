@@ -206,11 +206,18 @@ ERR_ID HW_eth_send(unsigned int *p, unsigned int len)
 	}
 }
 
+void HW_eth_pkt_recv(ETH_SENT_CB func)
+{
+	if (func != 0)
+		eth.pkt_recvd = func;
+}
+
 void HW_eth_sent(ETH_SENT_CB func)
 {
 	if (func != 0)
 		eth.sent = func;
 }
+
 void HW_eth_task(void)
 {
 	unsigned int *r_ptr;

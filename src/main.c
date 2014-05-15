@@ -36,10 +36,10 @@ unsigned long long led_tick;
 unsigned long long hex_tick;
 unsigned long long eth_tick;
 unsigned int hex_led_cntr;
-
+unsigned int tmp;
 //==============================================================================
 // Function declarations
-
+void data_cb(unsigned int *p, unsigned int len);
 interrupt void ctrl_isr(void);
 void startup_loop(void);
 void main_loop(void) __attribute__((noreturn));
@@ -61,12 +61,18 @@ void main(void)
 	hex_tick = 0;
 	eth_tick = 0;
 	hex_led_cntr = 0;
+	HW_eth_pkt_recv(data_cb);
 	EINT;
 	for (i = 0; i < 2000; i++)
 		data[i] = i;
-	startup_loop();
+	//startup_loop();
 	main_loop();					/* Start the super loop */
 
+}
+
+void data_cb(unsigned int *p, unsigned int len)
+{
+	return;
 }
 
 void startup_loop(void)
@@ -144,14 +150,14 @@ void main_loop(void)
 	//=========================================================================
 	// Ethernet data processing task
 	//   Task is executed every loop to maximize through output
-	HW_eth_task();
+	//HW_eth_task();
 
 	// Debug task, send data to host
-    if( tick >= eth_tick) {
-		while (eth_tick <= tick)
-			eth_tick += (1 * CTRL_FREQ);
-		HW_eth_send(data, 50);
-	}
+//    if( tick >= eth_tick) {
+//		while (eth_tick <= tick)
+//			eth_tick += (1 * CTRL_FREQ);
+//		HW_eth_send(data, 50);
+//	}
 
     //=========================================================================
     // LED blinking task
@@ -168,7 +174,10 @@ void main_loop(void)
     if( tick >= hex_tick) {
 		while (hex_tick <= tick)
 			hex_tick += (0.5 * CTRL_FREQ);
-    	HW_cpld_reg_write_poll(0, hex_led_cntr++);
+    	HW_cpld_reg_write_poll(0x8555, 0xAAAA);
+    	HW_cpld_reg_write_poll(0x8000, 0x5555);
+    	tmp = HW_cpld_reg_read_poll(0x0AAA);
+
 	}
 
 // End point of task code
