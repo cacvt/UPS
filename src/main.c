@@ -173,12 +173,10 @@ void main_loop(void)
     // HEX LED update blinking task
     if( tick >= hex_tick) {
 		while (hex_tick <= tick)
-			hex_tick += (0.001 * CTRL_FREQ);
-    	tmp = HW_cpld_reg_read_poll(0x0020);
-    	HW_cpld_reg_read_poll(0x0021);
-//    	if(tmp != 0xA50F)
-//    		asm(" ESTOP0");
-    	HW_cpld_reg_write_poll(0x8000, hex_led_cntr++);
+			hex_tick += (0.1 * CTRL_FREQ);
+    	tmp = HW_cpld_reg_read_poll(REG_CPLD_INPUT0);
+    	HW_cpld_reg_read_poll(REG_CPLD_INPUT1);
+    	HW_cpld_reg_write_poll(REG_HEX_LED, hex_led_cntr++);
 
 
 	}

@@ -12,6 +12,14 @@
 //==============================================================================
 // Public constant definition
 #define	REG_HEX_LED			0x0000
+#define REG_CURRENT_ERROR0	0x0010
+#define REG_CURRENT_ERROR1	0x0011
+#define REG_LATCHED_ERROR0	0x0012
+#define REG_LATCHED_ERROR1	0x0013
+#define REG_CPLD_INPUT0		0x0020
+#define REG_CPLD_INPUT1		0x0021
+#define REG_CPLD_OUTPUT0	0x0022
+#define REG_CPLD_OUTPUT1	0x0023
 
 //==============================================================================
 // Type definition
