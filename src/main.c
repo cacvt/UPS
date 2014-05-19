@@ -177,7 +177,13 @@ void main_loop(void)
     	tmp = HW_cpld_reg_read_poll(REG_CPLD_INPUT0);
     	HW_cpld_reg_read_poll(REG_CPLD_INPUT1);
     	HW_cpld_reg_write_poll(REG_HEX_LED, hex_led_cntr++);
-
+    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x00);
+    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_CLEAR1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
+//    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
 
 	}
 

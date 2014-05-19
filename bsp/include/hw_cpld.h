@@ -20,7 +20,12 @@
 #define REG_CPLD_INPUT1		0x0021
 #define REG_CPLD_OUTPUT0	0x0022
 #define REG_CPLD_OUTPUT1	0x0023
-
+#define REG_CPLD_SET0		0x0024
+#define REG_CPLD_SET1		0x0025
+#define REG_CPLD_CLEAR0		0x0026
+#define REG_CPLD_CLEAR1		0x0027
+#define REG_CPLD_TOGGLE0	0x0028
+#define REG_CPLD_TOGGLE1	0x0029
 //==============================================================================
 // Type definition
 

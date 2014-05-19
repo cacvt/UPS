@@ -46,6 +46,7 @@ void HW_cpld_init(void)
 	McbspaRegs.SPCR1.bit.RRST=1;										// Release RX from Reset
 	McbspaRegs.SPCR2.bit.FRST=1;										// Frame Sync Generator reset
 	McbspaRegs.SPCR2.bit.XINTM = 0;										// Send interrupt when XREADY change from 0 to 1
+	McbspaRegs.SPCR2.bit.FREE = 1;
 
 //	// DMA initialization
 //	SysCtrlRegs.PCLKCR3.bit.DMAENCLK = 1;                   			// Enable clock of DMA module
