@@ -20,23 +20,22 @@ unsigned int rtn_buf[400];
 //test variables
 unsigned long long led_tick;
 unsigned long long hex_tick;
-unsigned long long eth_tick;
 unsigned int hex_led_cntr;
 unsigned int tmp;
 //==============================================================================
 // Function declarations
+interrupt void ctrl_isr(void);
+void main_loop(void) __attribute__((noreturn));
+
+// Sample functions for Ethernet commnunication
 void data_cb(unsigned int *p, unsigned int len);
 void data_sent_cb(unsigned int *p, unsigned int len);
-interrupt void ctrl_isr(void);
-void startup_loop(void);
-void main_loop(void) __attribute__((noreturn));
 
 //==============================================================================
 // Function definitions
 
 void main(void)
 {
-	int i;
 
 	HW_init();						/* Initialize hardware*/
 	HW_set_ctrl_isr(ctrl_isr);      /* Set control ISR */
@@ -45,7 +44,6 @@ void main(void)
 	tick = 0;
 	led_tick = 0;
 	hex_tick = 0;
-	eth_tick = 0;
 	hex_led_cntr = 0;
 	HW_eth_pkt_recv(data_cb);
 	HW_eth_sent(data_sent_cb);
@@ -55,28 +53,6 @@ void main(void)
 
 }
 
-void data_cb(unsigned int *p, unsigned int len)
-{
-
-	int it;
-
-	while (busy_sending == 1) {	};
-
-	for (it=0; it<len; it++) {
-		rtn_buf[it] = p[it];
-	}
-
-	HW_eth_send(&rtn_buf[0], len);
-	busy_sending = 1;
-
-	return;
-}
-
-
-void data_sent_cb(unsigned int *p, unsigned int len)
-{
-	busy_sending = 0;
-}
 
 //=============================================================================
 // The super loop
@@ -92,40 +68,33 @@ void main_loop(void)
 	//   Task is executed every loop to maximize through output
 	HW_eth_task();
 
-	// Debug task, send data to host
-//    if( tick >= eth_tick) {
-//		while (eth_tick <= tick)
-//			eth_tick += (1 * CTRL_FREQ);
-//		HW_eth_send(data, 50);
-//	}
+	//=========================================================================
+    // LED blinking task
+    if( tick >= led_tick) {
+		while (led_tick <= tick)
+			led_tick += (0.5 * CTRL_FREQ);
 
-//    //=========================================================================
-//    // LED blinking task
-//    if( tick >= led_tick) {
-//		while (led_tick <= tick)
-//			led_tick += (0.5 * CTRL_FREQ);
-//
-//		CC_LED0_TOOGLE;
-//		CC_LED1_TOOGLE;
-//	}
-//
-//    //=========================================================================
-//    // HEX LED update blinking task
-//    if( tick >= hex_tick) {
-//		while (hex_tick <= tick)
-//			hex_tick += (0.1 * CTRL_FREQ);
-//    	tmp = HW_cpld_reg_read_poll(REG_CPLD_INPUT0);
-//    	HW_cpld_reg_read_poll(REG_CPLD_INPUT1);
-//    	HW_cpld_reg_write_poll(REG_HEX_LED, hex_led_cntr++);
-//    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x40);
-//    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x00);
+		CC_LED0_TOOGLE;
+		CC_LED1_TOOGLE;
+	}
+
+    //=========================================================================
+    // HEX LED update blinking task
+    if( tick >= hex_tick) {
+		while (hex_tick <= tick)
+		hex_tick += (0.1 * CTRL_FREQ);
+    	tmp = HW_cpld_reg_read_poll(REG_CPLD_INPUT0);
+    	HW_cpld_reg_read_poll(REG_CPLD_INPUT1);
+    	HW_cpld_reg_write_poll(REG_HEX_LED, hex_led_cntr++);
+    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x00);
+    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_CLEAR1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
+    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
 //    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
-//    	HW_cpld_reg_write_poll(REG_CPLD_CLEAR1, 0x40);
-//    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
-//    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
-////    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
-//
-//	}
+
+	}
 
 // End point of task code
 //=============================================================================
@@ -157,4 +126,30 @@ interrupt void ctrl_isr(void)
     PROFILE_ISR_STOP;						    // Execution time monitoring
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP7;     // Acknowledge interrupt
     											//   to accept new ones
+}
+
+
+//==============================================================================
+// Sample functions for Ethernet communication
+void data_cb(unsigned int *p, unsigned int len)
+{
+
+	int it;
+
+	while (busy_sending == 1) {	};
+
+	for (it=0; it<len; it++) {
+		rtn_buf[it] = p[it];
+	}
+
+	HW_eth_send(&rtn_buf[0], len);
+	busy_sending = 1;
+
+	return;
+}
+
+
+void data_sent_cb(unsigned int *p, unsigned int len)
+{
+	busy_sending = 0;
 }
