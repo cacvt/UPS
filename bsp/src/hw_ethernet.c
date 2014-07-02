@@ -333,6 +333,7 @@ static void low_level_init(void)
 	EALLOW;
 
 	// Enable clock for SPI-A module
+	SysCtrlRegs.LOSPCP.bit.LSPCLK = 0;
 	SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 1;
 
 	// Put SPI into reset
