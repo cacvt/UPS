@@ -14,6 +14,6 @@ typedef enum {
 	ERR_MEM = -1,
 	ERR_BUSY = -2,
 	ERR_INVALID_PARAM = -3,
-
+	ERR_TIMEOUT = -4
 } ERR_ID;
 #endif//__ERROR_ID_H__

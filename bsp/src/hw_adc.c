@@ -50,7 +50,6 @@ void HW_adc_init(void)
 
 void HW_adc_scale(void)
 {
-	int tmp;
     adc_val[0][0] = (float)(adc_res[0][0]<<4) * ADC_FS[0][0] - ADC_OS[0][0];
     adc_val[0][1] = (float)(adc_res[0][1]<<4) * ADC_FS[0][1] - ADC_OS[0][1];
     adc_val[0][2] = (float)(adc_res[0][2]<<4) * ADC_FS[0][2] - ADC_OS[0][2];

@@ -1,37 +1,23 @@
-/*
- * main.c
- *
- *  Created on: Nov 7, 2013
- *      Author: Sleepy
- */
-#include "bsp.h"
 //==============================================================================
-// Constant Definition
-#define IPADDR0		10
-#define IPADDR1		30
-#define IPADDR2		81
-#define IPADDR3		19
+// Copyright © 2014 Virginia Tech Center for Power Electronics Systems
+//
+// Filename:     main.c
+// Author:       Z Shen
+// Description:
+//   Sample entry point of the whole code
+//==============================================================================
 
-#define NETMASK0	255
-#define NETMASK1	255
-#define NETMASK2	255
-#define NETMASK3	0
-
-#define GATEWAY0	10
-#define GATEWAY1	30
-#define GATEWAY2	81
-#define GATEWAY3	1
-
-#define CTRL_PORT	2587
-#define DATA_PORT	2588
-
+#include "bsp.h"
 
 //==============================================================================
 // Global variable definitions
 unsigned long long tick;
 
+// Variable for Ethernet submodule
+unsigned int busy_sending;
+unsigned int rtn_buf[400];
+
 //test variables
-unsigned int data[2000];
 unsigned long long led_tick;
 unsigned long long hex_tick;
 unsigned long long eth_tick;
@@ -40,6 +26,7 @@ unsigned int tmp;
 //==============================================================================
 // Function declarations
 void data_cb(unsigned int *p, unsigned int len);
+void data_sent_cb(unsigned int *p, unsigned int len);
 interrupt void ctrl_isr(void);
 void startup_loop(void);
 void main_loop(void) __attribute__((noreturn));
@@ -53,7 +40,6 @@ void main(void)
 
 	HW_init();						/* Initialize hardware*/
 	HW_set_ctrl_isr(ctrl_isr);      /* Set control ISR */
-	HW_dac_update_all(0);
 
 	// System tick initialization
 	tick = 0;
@@ -62,80 +48,34 @@ void main(void)
 	eth_tick = 0;
 	hex_led_cntr = 0;
 	HW_eth_pkt_recv(data_cb);
+	HW_eth_sent(data_sent_cb);
+	busy_sending = 0;
 	EINT;
-	for (i = 0; i < 2000; i++)
-		data[i] = i;
-	//startup_loop();
 	main_loop();					/* Start the super loop */
 
 }
 
 void data_cb(unsigned int *p, unsigned int len)
 {
+
+	int it;
+
+	while (busy_sending == 1) {	};
+
+	for (it=0; it<len; it++) {
+		rtn_buf[it] = p[it];
+	}
+
+	HW_eth_send(&rtn_buf[0], len);
+	busy_sending = 1;
+
 	return;
 }
 
-void startup_loop(void)
+
+void data_sent_cb(unsigned int *p, unsigned int len)
 {
-	int step;
-	unsigned long long startup_tick;
-
-	step = 0;
-
-	while (step < 14) {
-		switch (step) {
-		case 0:
-			HW_eth_cmd(ETH_CMD_RESET, 0);
-			startup_tick = tick + 5 * CTRL_FREQ;
-			step++;
-			break;
-
-		case 2:
-			HW_eth_cmd(ETH_CMD_SET_MASK, MAKE_IP(NETMASK0, NETMASK1, NETMASK2, NETMASK3));
-			step++;
-			break;
-		case 4:
-			HW_eth_cmd(ETH_CMD_SET_GW, MAKE_IP(GATEWAY0, GATEWAY1, GATEWAY2, GATEWAY3));
-			step++;
-			break;
-
-		case 6:
-			HW_eth_cmd(ETH_CMD_SET_IP, MAKE_IP(IPADDR0, IPADDR1, IPADDR2, IPADDR3));
-			step++;
-			break;
-
-		case 8:
-			HW_eth_cmd(ETH_CMD_SET_CTRL_PORT, CTRL_PORT);
-			step++;
-			break;
-
-		case 10:
-			HW_eth_cmd(ETH_CMD_SET_DATA_PORT, DATA_PORT);
-			step++;
-			break;
-
-		case 12:
-			HW_eth_cmd(ETH_CMD_START_SERVER, 0);
-			step++;
-			break;
-
-		case 1:
-			if (tick > startup_tick) {
-				step--;
-				break;
-			}
-		case 3:
-		case 5:
-		case 7:
-		case 9:
-		case 11:
-		case 13:
-			if (HW_eth_get_current_cmd() == ETH_CMD_NONE)
-					step++;
-			break;
-		}
-		HW_eth_task();
-	}
+	busy_sending = 0;
 }
 
 //=============================================================================
@@ -150,7 +90,7 @@ void main_loop(void)
 	//=========================================================================
 	// Ethernet data processing task
 	//   Task is executed every loop to maximize through output
-	//HW_eth_task();
+	HW_eth_task();
 
 	// Debug task, send data to host
 //    if( tick >= eth_tick) {
@@ -159,33 +99,33 @@ void main_loop(void)
 //		HW_eth_send(data, 50);
 //	}
 
-    //=========================================================================
-    // LED blinking task
-    if( tick >= led_tick) {
-		while (led_tick <= tick)
-			led_tick += (0.5 * CTRL_FREQ);
-
-		CC_LED0_TOOGLE;
-		CC_LED1_TOOGLE;
-	}
-
-    //=========================================================================
-    // HEX LED update blinking task
-    if( tick >= hex_tick) {
-		while (hex_tick <= tick)
-			hex_tick += (0.1 * CTRL_FREQ);
-    	tmp = HW_cpld_reg_read_poll(REG_CPLD_INPUT0);
-    	HW_cpld_reg_read_poll(REG_CPLD_INPUT1);
-    	HW_cpld_reg_write_poll(REG_HEX_LED, hex_led_cntr++);
-    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x40);
-    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x00);
-    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
-    	HW_cpld_reg_write_poll(REG_CPLD_CLEAR1, 0x40);
-    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
-    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
+//    //=========================================================================
+//    // LED blinking task
+//    if( tick >= led_tick) {
+//		while (led_tick <= tick)
+//			led_tick += (0.5 * CTRL_FREQ);
+//
+//		CC_LED0_TOOGLE;
+//		CC_LED1_TOOGLE;
+//	}
+//
+//    //=========================================================================
+//    // HEX LED update blinking task
+//    if( tick >= hex_tick) {
+//		while (hex_tick <= tick)
+//			hex_tick += (0.1 * CTRL_FREQ);
+//    	tmp = HW_cpld_reg_read_poll(REG_CPLD_INPUT0);
+//    	HW_cpld_reg_read_poll(REG_CPLD_INPUT1);
+//    	HW_cpld_reg_write_poll(REG_HEX_LED, hex_led_cntr++);
+//    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x40);
+//    	HW_cpld_reg_write_poll(REG_CPLD_OUTPUT1, 0x00);
 //    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
-
-	}
+//    	HW_cpld_reg_write_poll(REG_CPLD_CLEAR1, 0x40);
+//    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
+//    	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
+////    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
+//
+//	}
 
 // End point of task code
 //=============================================================================
