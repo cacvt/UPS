@@ -1,9 +1,11 @@
-/*
- * bsp.h
- *
- *  Created on: Sep 13, 2013
- *      Author: shenzy
- */
+//==============================================================================
+// Copyright © 2014 Virginia Tech Center for Power Electronics Systems
+//
+// Filename:     bsp.h
+// Author:       Z Shen
+// Description:
+//   Main header file for board supporting package
+//==============================================================================
 
 #ifndef __BSP_H__
 #define __BSP_H__
@@ -18,14 +20,16 @@
 #include "hw_cpld.h"
 #include "hw_dac.h"
 #include "hw_modulator.h"
+#include "param_table.h"
 
-//#include "hw_spi.h"
+//==============================================================================
+// Public variable declarations
+extern unsigned long long tick;
 
-/*******************************************************************************
- * Public functions declarations
- ******************************************************************************/
+//==============================================================================
+// Public functions declarations
 
-/* Wrapper functions of lower level functions */
+// Wrapper functions of lower level functions
 void HW_init(void);
 
 #ifdef __HW_ADC_H__

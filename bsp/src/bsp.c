@@ -1,11 +1,22 @@
-/*
- * bsp.c
- *
- *  Created on: Sep 13, 2013
- *      Author: shenzy
- */
+//==============================================================================
+// Copyright © 2014 Virginia Tech Center for Power Electronics Systems
+//
+// Filename:     bsp.h
+// Author:       Z Shen
+// Description:
+//   Collector file for board supporting package
+//==============================================================================
 #include "bsp.h"
 
+//==============================================================================
+// Public variable definitions
+unsigned long long tick;
+
+//==============================================================================
+// Public functions definitions
+
+// Call initilization functions accoding whether header file is included in
+// bsp.h
 void HW_init(void)
 {
 	HW_sys_init();
@@ -27,9 +38,14 @@ void HW_init(void)
 	HW_cc_led_init();
 #endif // __HW_CC_LED_H__
 
+#ifdef __PARAM_TABLE_H__
+	param_table_init();
+#else  //__PARAM_TABLE_H__
+
 #ifdef __HW_ETHERNET_H__
 	HW_eth_init();
 #endif // __HW_ETHERNET_H__
+#endif // __PARAM_TABLE_H__
 
 #ifdef __HW_CPLD_H__
 	HW_cpld_init();

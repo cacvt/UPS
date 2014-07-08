@@ -22,6 +22,9 @@
 #define __HW_ETHERNET_H__
 #include "device.h"
 #include "error_id.h"
+//==============================================================================
+// Public constants definition
+#define ETH_MAX_PKT_LEN				200				// word
 
 //==============================================================================
 // Public type declaration

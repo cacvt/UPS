@@ -17,7 +17,6 @@
 #define ETH_CMD_TIMEOUT				5000L			// ms
 #define ETH_RECV_BUF_LEN			2048			// Must be power of 2
 #define ETH_SEND_QUEUE_LEN			10				// item
-#define ETH_MAX_PKT_LEN				200				// word
 #define ETH_MAX_CMD_LEN				4				// word
 #define ETH_ACK_LEN					2				// word
 

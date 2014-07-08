@@ -43,8 +43,7 @@ PAGE 0 :
    RAML0H       : origin = 0x008100, length = 0x001F00
    RAML1        : origin = 0x00A000, length = 0x002000
    ZONE7A       : origin = 0x200000, length = 0x00FC00    /* XINTF zone 7 - program space */
-   RAMH0        : origin = 0x300000, length = 0x008000
-   RAMH1        : origin = 0x308000, length = 0x008000
+   DATARAM      : origin = 0x300000, length = 0x010000
    CSM_RSVD     : origin = 0x33FF80, length = 0x000076     /* Reserved - for compatibility to legacy C28x designs. */
    CSM_PWL_PROG : origin = 0x33FFF8, length = 0x000008     /* 128-bit password locations */
    IQTABLES     : origin = 0x3FE000, length = 0x000b50

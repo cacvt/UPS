@@ -11,7 +11,6 @@
 
 //==============================================================================
 // Global variable definitions
-unsigned long long tick;
 
 // Variable for Ethernet submodule
 unsigned int busy_sending;
@@ -27,10 +26,6 @@ unsigned int tmp;
 interrupt void ctrl_isr(void);
 void main_loop(void) __attribute__((noreturn));
 
-// Sample functions for Ethernet commnunication
-void data_cb(unsigned int *p, unsigned int len);
-void data_sent_cb(unsigned int *p, unsigned int len);
-
 //==============================================================================
 // Function definitions
 
@@ -45,9 +40,6 @@ void main(void)
 	led_tick = 0;
 	hex_tick = 0;
 	hex_led_cntr = 0;
-	HW_eth_pkt_recv(data_cb);
-	HW_eth_sent(data_sent_cb);
-	busy_sending = 0;
 	EINT;
 	main_loop();					/* Start the super loop */
 
@@ -126,30 +118,4 @@ interrupt void ctrl_isr(void)
     PROFILE_ISR_STOP;						    // Execution time monitoring
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP7;     // Acknowledge interrupt
     											//   to accept new ones
-}
-
-
-//==============================================================================
-// Sample functions for Ethernet communication
-void data_cb(unsigned int *p, unsigned int len)
-{
-
-	int it;
-
-	while (busy_sending == 1) {	};
-
-	for (it=0; it<len; it++) {
-		rtn_buf[it] = p[it];
-	}
-
-	HW_eth_send(&rtn_buf[0], len);
-	busy_sending = 1;
-
-	return;
-}
-
-
-void data_sent_cb(unsigned int *p, unsigned int len)
-{
-	busy_sending = 0;
 }

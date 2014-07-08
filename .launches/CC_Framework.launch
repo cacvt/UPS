@@ -11,7 +11,7 @@
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_PROJECT.Texas Instruments XDS2xx LAN Emulator_0/C28xx" value="CC_Framework"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_PROJECT.Texas Instruments XDS2xx USB Emulator_0/C28xx" value="CC_Framework"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_TARGET_CONFIG" value="${target_config_active_default:CC_Framework}"/>
-<stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS2xx LAN Emulator_0/C28xx" value="D:/Work\Common Controller\DSP_Code\framework\Debug\CC_Framework.out"/>
+<stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS2xx LAN Emulator_0/C28xx" value="D:/Work\Common Controller\_Git_Tracked\Software\DSP_Codes\framework\Debug\CC_Framework.out"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS2xx USB Emulator_0/C28xx" value="D:/Work\Common Controller\DSP_Code\framework\Debug\CC_Framework.out"/>
 <mapAttribute key="com.ti.ccstudio.debug.ui.displayFormats">
 <mapEntry key="Texas Instruments XDS2xx LAN Emulator_0/C28xx@##separator##@1" value="16-Bit Hex - TI Style"/>
