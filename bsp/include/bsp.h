@@ -19,7 +19,6 @@
 #include "hw_CC_LED.h"
 #include "hw_cpld.h"
 #include "hw_dac.h"
-#include "hw_modulator.h"
 #include "param_table.h"
 
 //==============================================================================
