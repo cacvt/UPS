@@ -74,20 +74,6 @@ void HW_adc_set_isr(CTRL_ISR_FUNC func)
 /*******************************************************************************
  * Private function definitions
  ******************************************************************************/
-interrupt void adc_default_isr(void)
-{
-    /* Disable SOC generation from ePWM1 */
-    EALLOW;
-    EPwm1Regs.ETSEL.all &= (~0x8800);
-    EDIS;
-
-    /* User codes */
-
-    /* Re-arm DMA */
-
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP12;
-}
-
 void adc_init_dma(void)
 {
     EALLOW;
