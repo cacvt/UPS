@@ -27,7 +27,7 @@ void HW_cc_led_init()
 	GpioCtrlRegs.GPBPUD.bit.GPIO55 = 1;
     EDIS;
 
-    /* Display 88 on LED */
+    /* Turn on LEDs */
     CC_LED0_ON;
     CC_LED1_ON;
 }

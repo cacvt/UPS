@@ -21,7 +21,6 @@ const float ADC_OS[2][6] = ADC_OS_VAL;
 /*******************************************************************************
  * Private function declaration
  ******************************************************************************/
-interrupt void adc_default_isr(void);
 void adc_init_dma(void);
 void adc_init_io(void);
 void adc_init_isr();

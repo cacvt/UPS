@@ -50,6 +50,8 @@ void HW_init(void)
 #ifdef __HW_CPLD_H__
 	HW_cpld_init();
 #endif // __HW_CPLD_H__
+
+	tick = 0;
 }
 
 #ifdef __HW_ADC_H__

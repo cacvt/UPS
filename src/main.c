@@ -12,11 +12,7 @@
 //==============================================================================
 // Global variable definitions
 
-// Variable for Ethernet submodule
-unsigned int busy_sending;
-unsigned int rtn_buf[400];
-
-//test variables
+//Test task variables
 unsigned long long led_tick;
 unsigned long long hex_tick;
 unsigned int hex_led_cntr;
@@ -36,7 +32,7 @@ void main(void)
 	HW_set_ctrl_isr(ctrl_isr);      /* Set control ISR */
 
 	// System tick initialization
-	tick = 0;
+
 	led_tick = 0;
 	hex_tick = 0;
 	hex_led_cntr = 0;
@@ -84,8 +80,6 @@ void main_loop(void)
     	HW_cpld_reg_write_poll(REG_CPLD_CLEAR1, 0x40);
     	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
     	HW_cpld_reg_write_poll(REG_CPLD_TOGGLE1, 0x40);
-//    	HW_cpld_reg_write_poll(REG_CPLD_SET1, 0x40);
-
 	}
 
 // End point of task code
