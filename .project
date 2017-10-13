@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>CC_Framework</name>
+	<name>UPS_v1.1.4</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -24,4 +24,10 @@
 		<nature>org.eclipse.cdt.core.ccnature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>ORIGINAL_PROJECT_ROOT</name>
+			<value>file:/C:/UPS_v1.1.4/CC_Framework</value>
+		</variable>
+	</variableList>
 </projectDescription>
