@@ -78,28 +78,6 @@ float Duty_Ratio[7][2];                   //Phase leg duty ratio
 Uint32 D[7][2];                           //two duty ratio for each phase leg
 //CALCULATE_DATA	VI_C;		          //calculated data
 
-
-//----------ADC calibration-------------------
-// revised by Ming Lu
-int32 sensor_cnt;
-
-float sensor_Ia_total;
-float sensor_Ia_average;
-
-float sensor_Ib_total;
-float sensor_Ib_average;
-
-float sensor_Ic_total;
-float sensor_Ic_average;
-
-float sensor_Vab_total;
-float sensor_Vab_average;
-
-float sensor_Vbc_total;
-float sensor_Vbc_average;
-//----------ADC calibration-------------------
-
-
 //for PLL, no need to change
 float theta=0,sintheta=0, costheta=0;     //angle information
 struct SYNC syn;                          //PLL
@@ -129,20 +107,6 @@ void main(void) {
 
     HW_init(); /* Initialize hardware*/
     control_init();//Initilize control variable and output
-
-
-    // Initalize counters for ADC calibration:
-      sensor_cnt = 0;
-//    sensor_Ia_total = 0;
-//    sensor_Ia_average = 0;
-//    sensor_Ib_total = 0;
-//    sensor_Ib_average = 0;
-//    sensor_Ic_total = 0;
-//    sensor_Ic_average = 0;
-//    sensor_Vab_total = 0;
-//    sensor_Vab_average = 0;
-    sensor_Vbc_total = 0;
-    sensor_Vbc_average = 0;
 
     EALLOW;  // This is needed to write to EALLOW protected registers
     PieVectTable.EPWM9_INT = &epwm9_timer_isr;
@@ -248,42 +212,8 @@ interrupt void ctrl_isr(void)
 // User code begin
 
 	Sample_Data();
-    control_function();
-
-
-
-    //----------------ADC calibration for ManualZERO purpose-----------------
-    // revised by Ming Lu
-    if (sensor_cnt <= 500)
-    {
-
-    	sensor_Ia_total = sensor_Ia_total + VI_S.Ia1;
-    	sensor_Ib_total = sensor_Ib_total + VI_S.Ib1;
-     	sensor_Ic_total = sensor_Ic_total + VI_S.Ic1;
-    	sensor_Vab_total = sensor_Vab_total + VI_S.Vab1;
-    	sensor_Vbc_total = sensor_Vbc_total + VI_S.Vbc1;
-
-    	sensor_cnt++;
-    }
-    else
-    {
-    	sensor_Ia_average = sensor_Ia_total * 0.002;
-    	sensor_Ib_average = sensor_Ib_total * 0.002;
-    	sensor_Ic_average = sensor_Ic_total * 0.002;
-    	sensor_Vab_average = sensor_Vab_total * 0.002;
-     	sensor_Vbc_average = sensor_Vbc_total * 0.002;
-
-    	sensor_cnt = 0;
-
-    	sensor_Ia_total = 0;
-    	sensor_Ib_total = 0;
-    	sensor_Ic_total = 0;
-    	sensor_Vab_total = 0;
-    	sensor_Vbc_total = 0;
-    }
-    //----------------ADC calibration-----------------
-
-
+	ADCCalibration();
+	control_function();
 
 
 //==============================================================================
