@@ -6,6 +6,7 @@
 // Modified by Jianghui Yu
 //
 // Modified by Ming Lu, 06/09/2017
+// Modified by chien-an chen, 10/24/17
 //
 // Description:
 //   7 PWM modules are used, complementary signals and deadtime are generated in CPLD
@@ -254,7 +255,7 @@ void control_init(void)
 	VI_S.Vdcp=0;VI_S.Vdcn=0;
 	VI_S.VBa=0;VI_S.IBa=0;
 	VI_S.Ia2=0;VI_S.Ib2=0;VI_S.Ic2=0;
-//	VI_C.VavgA=0;VI_C.VavgB=0;VI_C.VavgC=0;          //calculated data intilization
+//	VI_C.VavgA=0;VI_C.VavgB=0;VI_C.VavgC=0;          //calculated data intilization
 	//RELAY_PRE;                                       //connect DC source for pre-charge
 
 	CPLD_NO_FAULT_SET;                   //clear DSP set error
