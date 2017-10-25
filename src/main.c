@@ -6,7 +6,7 @@
 // Modified by Jianghui Yu
 //
 // Modified by Ming Lu, 06/09/2017
-// Modified by chien-an chen, 10/24/17
+// Modified by chien-an chen, 10/25/17
 //
 // Description:
 //   7 PWM modules are used, complementary signals and deadtime are generated in CPLD
