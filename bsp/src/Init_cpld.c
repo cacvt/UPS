@@ -1,5 +1,5 @@
 //==============================================================================
-// Copyright © 2014 Virginia Tech Center for Power Electronics Systems
+// Copyright ï¿½2014 Virginia Tech Center for Power Electronics Systems
 //
 // Filename:     hw_cpld.c
 // Author:       Z Shen
@@ -9,7 +9,8 @@
 //==============================================================================
 #define __HW_CPLD_C__
 #include "device.h"
-#include "hw_cpld.h"
+#include <Init_cpld.h>
+#include <Func_CPLD.h>
 
 //==============================================================================
 // Private function declaration
@@ -38,7 +39,7 @@ void HW_cpld_init(void)
 	McbspaRegs.RCR1.all = 0xA0;			// 32-bit word
 	McbspaRegs.XCR1.all = 0xA0;			// 32-bit word
 	McbspaRegs.SRGR2.all = 0x2000;										// CLKSM=1, FPER = 1 CLKG periods
-	McbspaRegs.SRGR1.all = 0x5;											// Frame Width = 1 CLKG period, CLKGDV=5 (XCLK = LSPCLK/6)
+	McbspaRegs.SRGR1.all = 0x4;											// Frame Width = 1 CLKG period, CLKGDV=5 (XCLK = LSPCLK/6)
 	DELAY_US(1.0E7/CPU_FREQ);											// Delay 2 McBSP clock cycle
 	McbspaRegs.SPCR2.bit.GRST=1;										// Enable the sample rate generator
 	DELAY_US(1.0E7/CPU_FREQ);											// Delay 2 McBSP clock cycle
@@ -95,26 +96,54 @@ void HW_cpld_init(void)
 	GpioCtrlRegs.GPAPUD.bit.GPIO22 = 0;  	// Enable pull-up on GPIO22 (MCLKXA)
 	GpioCtrlRegs.GPAPUD.bit.GPIO23 = 0;     // Enable pull-up on GPIO23 (MFSXA)
 
-	// Send CS signal to SPI_CS pin on CPLD
+	// Send CS signal to SPI_CS pin on CPLD   -------------!!!---------------  49->23
+	GpioCtrlRegs.GPAMUX2.bit.GPIO23 = 0;	// GPIO23 as IO
+	GpioCtrlRegs.GPADIR.bit.GPIO23 = 1;		// As output
+	GpioCtrlRegs.GPAPUD.bit.GPIO23 = 1;		// Disable pull-up to save power
+	GpioDataRegs.GPASET.bit.GPIO23 = 1;		// Set high to send MFSXA to SPI_CS
+
+	// Set GPIO48 as reset for CPLD             49->48
 	GpioCtrlRegs.GPBMUX2.bit.GPIO48 = 0;	// GPIO48 as IO
 	GpioCtrlRegs.GPBDIR.bit.GPIO48 = 1;		// As output
 	GpioCtrlRegs.GPBPUD.bit.GPIO48 = 1;		// Disable pull-up to save power
-	GpioDataRegs.GPBSET.bit.GPIO48 = 1;		// Set high to send MFSXA to SPI_CS
+	GpioDataRegs.GPBSET.bit.GPIO48 = 1;
 
-	// Set GPIO49 as reset for CPLD
-	GpioCtrlRegs.GPBMUX2.bit.GPIO49 = 0;	// GPIO48 as IO
-	GpioCtrlRegs.GPBDIR.bit.GPIO49 = 1;		// As output
-	GpioCtrlRegs.GPBPUD.bit.GPIO49 = 1;		// Disable pull-up to save power
+	GpioCtrlRegs.GPAMUX1.bit.GPIO14 = 0;    // GPIO14 is err set pin
+    GpioCtrlRegs.GPADIR.bit.GPIO14 = 1;     // As output
+    GpioCtrlRegs.GPAPUD.bit.GPIO14 = 1;     // Disable pull-up to save power
+
+	GpioCtrlRegs.GPAMUX1.bit.GPIO15 = 0;    // GPIO15 is err clr pin
+    GpioCtrlRegs.GPADIR.bit.GPIO15 = 1;     // As output
+    GpioCtrlRegs.GPAPUD.bit.GPIO15 = 1;     // Disable pull-up to save power
+
+	GpioCtrlRegs.GPCMUX2.bit.GPIO84 = 0;    // GPIO84
+    GpioCtrlRegs.GPCDIR.bit.GPIO84 = 0;     // As input
+    GpioCtrlRegs.GPCPUD.bit.GPIO84 = 1;     // Disable pull-up to save power
+
+	GpioCtrlRegs.GPCMUX2.bit.GPIO85 = 0;    // GPIO85
+    GpioCtrlRegs.GPCDIR.bit.GPIO85 = 1;     // As output
+    GpioCtrlRegs.GPCPUD.bit.GPIO85 = 1;     // Disable pull-up to save power
+
+	GpioCtrlRegs.GPCMUX2.bit.GPIO86 = 0;    // GPIO86
+    GpioCtrlRegs.GPCDIR.bit.GPIO86 = 1;     // As output
+    GpioCtrlRegs.GPCPUD.bit.GPIO86 = 1;     // Disable pull-up to save power
+
+	GpioCtrlRegs.GPCMUX2.bit.GPIO87 = 0;    // GPIO87
+    GpioCtrlRegs.GPCDIR.bit.GPIO87 = 1;     // As output
+    GpioCtrlRegs.GPCPUD.bit.GPIO87 = 1;     // Disable pull-up to save power
+
 	EDIS;
 
 	HW_cpld_reset();
+	CPLD_NO_FAULT_SET;
+	CPLD_FAULT_CLR;
 }
 
 void HW_cpld_reset(void)
 {
-	GpioDataRegs.GPBCLEAR.bit.GPIO49 = 1;	// Set low
-	DELAY_US(1);
-	GpioDataRegs.GPBSET.bit.GPIO49 = 1;		// Set high
+	GpioDataRegs.GPBCLEAR.bit.GPIO48 = 1;	// Set low
+	DELAY_US(500000);
+	GpioDataRegs.GPBSET.bit.GPIO48 = 1;		// Set high
 }
 void HW_cpld_reg_write_poll(unsigned int addr, unsigned int data)
 {

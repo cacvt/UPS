@@ -2,8 +2,8 @@
 //  sys.c
 //  Created on: Sep 13, 2013
 //      Author: shenzy
-#include "..\include\device.h"
-#include "..\include\hw_sys.h"
+#include <Init_sys.h>
+#include "device.h"
 
 //===============================================================================
 // Private function declarations

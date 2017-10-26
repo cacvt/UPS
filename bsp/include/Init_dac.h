@@ -3,6 +3,9 @@
  *
  *  Created on: Nov 7, 2013
  *      Author: Sleepy
+ *  Modified by Jianghui Yu
+ *  Description:
+ *    DAC Initialization header file, needs to be changed based on additional ADC
  */
 
 #ifndef __HW_DAC_H__
@@ -11,7 +14,9 @@
 /*******************************************************************************
  * Constant definition
  ******************************************************************************/
-#define DAC_BIT_RESOLUTION		(2.5L/65536.0L)
+#define DAC_BIT_RESOLUTION		(5.0/4096.0)
+#define DAC_FS		1/(1+200.0/470.0)/0.15 //gain for additional ADC channel
+#define DAC_OS		2.5*1.15               //offset for additional ADC channel
 
 enum DAC_ERR {
 	DAC_ERR_BUSY = -32767,

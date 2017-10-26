@@ -6,8 +6,8 @@
 // Description:
 //   A parameter tables that can be writed and read via Ethernet
 //==============================================================================
-#include "bsp.h"
-#include "param_table.h"
+#include <Init_param_table.h>
+#include <Initialization.h>
 //==============================================================================
 // Constant definition
 #define PKT_PROCESS_TIMEOUT	100			//ms

@@ -28,13 +28,25 @@ typedef interrupt void(*ISR_FUNC)(void);
 //==============================================================================
 // Configuration constants
 
-#define CPU_FREQ            200000000L      // CPU frequency
-#define CTRL_FREQ           50000L          // Control interrupt frequency
-#define SW_PER_SAMPLE       10L              // Number of switching per control period
+#define Vc 300.0                            //Set cap voltage refernece
+#define IBa0 10.0                             //Set Battery current reference
+
+#define CPU_FREQ            200000000L      // CPU frequency                             200M
+#define CTRL_FREQ           20000L          // Control interrupt frequency               20k    control calculation cannot finish in 10 ns
+#define SW_PER_SAMPLE       3L              // Number of switching per control period    switching frequency: 60k
+#define CTRL_CLK            0.00005         // Control clock period                      50 us
+#define DT                  0.04            // Deadtime                                  400 ns = 0.04 * Switching cycle
 
 #define DEAD_TIME_DAB_PRI   10L             // Dead time of DAB primary side phase leg in CPU clock cycle
 #define DEAD_TIME_DAB_SEC   10L             // Dead time of DAB secondary side phase leg in CPU clock cycle
 #define DEAD_TIME_PFC_HF    10L             // Dead time of PFC high frequency leg in CPU clock cycle
 #define DEAD_TIME_PFC_LF    10L             // Dead time of PFC low frequency leg in CPU clock cycle
+
+/*******************************************************************************
+ * Constant derived from configuration constants
+ ******************************************************************************/
+#define SW_FREQ     (CTRL_FREQ * SW_PER_SAMPLE)
+#define SW_PRD      (CPU_FREQ / SW_FREQ)
+#define SW_PRD_HALF (SW_PRD / 2)
 
 #endif /* __DEVICE_H__ */

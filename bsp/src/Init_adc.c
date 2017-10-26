@@ -1,13 +1,18 @@
+
 /*
  * adc.c
  *
  *  Created on: Sep 12, 2013
  *      Author: shenzy
+ *  Modified by Jianghui Yu
+ *  Description:
+ *    ADC initialization
+ *
  */
 #define __HW_ADC_C__
 #include "device.h"
 #include "hw_adc_constants.h"
-#include "hw_adc.h"
+#include <Init_adc.h>
 
 /*******************************************************************************
  * Private constants definition
@@ -45,23 +50,6 @@ void HW_adc_init(void)
 	adc_init_reg();
 	adc_init_dma();
 	adc_init_isr();
-}
-
-void HW_adc_scale(void)
-{
-    adc_val[0][0] = (float)(adc_res[0][0]<<4) * ADC_FS[0][0] - ADC_OS[0][0];
-    adc_val[0][1] = (float)(adc_res[0][1]<<4) * ADC_FS[0][1] - ADC_OS[0][1];
-    adc_val[0][2] = (float)(adc_res[0][2]<<4) * ADC_FS[0][2] - ADC_OS[0][2];
-    adc_val[0][3] = (float)(adc_res[0][3]<<4) * ADC_FS[0][3] - ADC_OS[0][3];
-    adc_val[0][4] = (float)(adc_res[0][4]<<4) * ADC_FS[0][4] - ADC_OS[0][4];
-    adc_val[0][5] = (float)(adc_res[0][5]<<4) * ADC_FS[0][5] - ADC_OS[0][5];
-    adc_val[1][0] = (float)(adc_res[1][0]<<4) * ADC_FS[1][0] - ADC_OS[1][0];
-    adc_val[1][1] = (float)(adc_res[1][1]<<4) * ADC_FS[1][1] - ADC_OS[1][1];
-    adc_val[1][2] = (float)(adc_res[1][2]<<4) * ADC_FS[1][2] - ADC_OS[1][2];
-    adc_val[1][3] = (float)(adc_res[1][3]<<4) * ADC_FS[1][3] - ADC_OS[1][3];
-    adc_val[1][4] = (float)(adc_res[1][4]<<4) * ADC_FS[1][4] - ADC_OS[1][4];
-    adc_val[1][5] = (float)(adc_res[1][5]<<4) * ADC_FS[1][5] - ADC_OS[1][5];
-
 }
 
 void HW_adc_set_isr(CTRL_ISR_FUNC func)
@@ -157,20 +145,32 @@ void adc_init_io(void)
     /* Event generation is controlled by pwm update isr & adc isr */
 
     /* SOC is generated when TBCTR = 0 */
-    EPwm1Regs.ETSEL.bit.SOCASEL = ET_CTR_ZERO;
-    EPwm1Regs.ETSEL.bit.SOCBSEL = ET_CTR_ZERO;
+    //EPwm2Regs.ETSEL.bit.SOCASEL = ET_CTR_ZERO;
+    //EPwm2Regs.ETSEL.bit.SOCBSEL = ET_CTR_ZERO;
 
     /* SOC is generated on first event */
-    EPwm1Regs.ETPS.bit.SOCAPRD = ET_1ST;
-    EPwm1Regs.ETPS.bit.SOCBPRD = ET_1ST;
+    //EPwm2Regs.ETPS.bit.SOCAPRD = ET_1ST;
+    //EPwm2Regs.ETPS.bit.SOCBPRD = ET_1ST;
 
     // Set ExtSOC  polarity
-    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1APOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
-    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1BPOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
+    //SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1APOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
+    //SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1BPOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
+
+    //SysCtrlRegs.EXTSOCCFG.bit.EXTSOC2APOLSEL= 0x1;
+    //SysCtrlRegs.EXTSOCCFG.bit.EXTSOC2BPOLSEL= 0x1;
+
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC3APOLSEL= 0x1;
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC3BPOLSEL= 0x1;
 
     /* Enable ExtSOC output 1A & 1B */
-    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1AEN = 0x1;     // Enable extsoc1a
-    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1BEN = 0x1;     // Enable extsoc1a
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1AEN = 0x0;     // Enable extsoc1a
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1BEN = 0x0;     // Enable extsoc1a
+
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC2AEN = 0x0;     // Enable extsoc1a
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC2BEN = 0x0;     // Enable extsoc1a
+
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC3AEN = 0x1;     // Enable extsoc1a
+    SysCtrlRegs.EXTSOCCFG.bit.EXTSOC3BEN = 0x1;     // Enable extsoc1a
 
     /* Set HSPCLK to 50M to generate SOC width of 640ns
      * SOC width is 32 cyc of HSPCLK */

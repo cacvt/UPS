@@ -4,8 +4,8 @@
  *  Created on: Nov 19, 2013
  *      Author: shenzy
  */
+#include <Init_profile.h>
 #include "device.h"
-#include "profile.h"
 /*******************************************************************************
  * Public variable definition
  ******************************************************************************/

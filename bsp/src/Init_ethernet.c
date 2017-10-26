@@ -1,3 +1,4 @@
+
 //==============================================================================
 // Copyright © 2014 Virginia Tech Center for Power Electronics Systems
 //
@@ -9,7 +10,7 @@
 //==============================================================================
 #define __HW_ETHERNET_C__
 
-#include "HW_ethernet.h"
+#include <Init_ethernet.h>
 #include "HW_ethernet_addr.h"
 
 //==============================================================================

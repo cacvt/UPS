@@ -8,6 +8,8 @@
 //==============================================================================
 #ifndef __PARAM_TABLE_H__
 #define __PARAM_TABLE_H__
+#include "Init_ethernet.h"
+
 //==============================================================================
 // Constant definition
 #define PARAM_TABLE_LEN		32
@@ -17,7 +19,7 @@
 #define FLOAT_PARAM(id)		(*(float *)(&param_table[id]))
 #define ULONG_PARAM(id)		(*(unsigned long *)(&param_table[id]))
 #define LONG_PARAM(id)		(*(long *)(&param_table[id]))
-#define UINT_PARAMT(id)		(*(unsigned int *)(&param_table[id]))
+#define UINT_PARAM(id)		(*(unsigned int *)(&param_table[id]))
 #define INT_PARAM(id)		(*(int *)(&param_table[id]))
 
 //==============================================================================
