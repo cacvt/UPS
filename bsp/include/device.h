@@ -32,10 +32,12 @@ typedef interrupt void(*ISR_FUNC)(void);
 #define IBa0 10.0                             //Set Battery current reference
 
 #define CPU_FREQ            200000000L      // CPU frequency                             200M
-#define CTRL_FREQ           20000L          // Control interrupt frequency               20k    control calculation cannot finish in 10 ns
-#define SW_PER_SAMPLE       3L              // Number of switching per control period    switching frequency: 60k
-#define CTRL_CLK            0.00005         // Control clock period                      50 us
+#define CTRL_FREQ           5000L          // Control interrupt frequency               5k    control calculation cannot finish in 10 ns
+#define SW_PER_SAMPLE       3L              // Number of switching per control period    switching frequency: 15k
+//#define CTRL_CLK            0.00005         // Control clock period                      50 us
+#define CTRL_CLK            0.0002         // Control clock period                      200 us
 #define DT                  0.04            // Deadtime                                  400 ns = 0.04 * Switching cycle
+#define EPWM_DB   200 											//Set dead band 1us (DB= 0.05us*EPWM_DB)
 
 #define DEAD_TIME_DAB_PRI   10L             // Dead time of DAB primary side phase leg in CPU clock cycle
 #define DEAD_TIME_DAB_SEC   10L             // Dead time of DAB secondary side phase leg in CPU clock cycle

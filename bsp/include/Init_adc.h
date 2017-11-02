@@ -23,6 +23,7 @@ typedef struct	//sampled data: 6 cap voltage, 6 arm current						--Jianghui
 	float Ic1; 		//input AC current, phase C
 	float Vab1;		//input AC line voltage, phase AB
 	float Vbc1;		//input AC line voltage, phase BC
+	float Vca1;		//input AC line voltage, phase BC
 	float Vdcp;		//DC bus voltage, positive
 	float Vdcn;		//DC bus voltage, negative
 	float VBa;		//Battery voltage

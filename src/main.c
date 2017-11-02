@@ -6,7 +6,7 @@
 // Modified by Jianghui Yu
 //
 // Modified by Ming Lu, 06/09/2017
-// Modified by chien-an chen, 10/24/17
+// Modified by chien-an chen, 10/26/17
 //
 // Description:
 //   7 PWM modules are used, complementary signals and deadtime are generated in CPLD
@@ -34,7 +34,7 @@ interrupt void ctrl_isr(void);
 
 void main_loop(void) __attribute__((noreturn));
 interrupt void epwm9_timer_isr(void);
-
+void EPWM_init(void);
 void HW_op(void);
 void DELAY_MS(Uint32 t);
 void control_init(void);
@@ -43,6 +43,10 @@ void ADCCalibration(void);
 void init_D(void);
 void update_D(void);
 void update_PWM(void);
+void SVM(void);
+void O_loop_VSI(void);
+void update_compare_PWM1(float DutyA_1, float DutyB_1, float DutyC_1);
+
 
 //==============================================================================
 // Global variable definitions
@@ -55,6 +59,8 @@ unsigned int tmp;
 unsigned int ad_ptr;
 
 unsigned long long ethernet_tick;
+
+#define PWM_Mode 1;											//set PWM mode
 
 //----------control reference--------------------//feel free to change
 //#define Vc 300.0                        //Set cap voltage refernece, move it to device.h
@@ -85,6 +91,11 @@ struct SYNC syn;                          //PLL
 unsigned int startsync = 0;               //Flag for start PLL
 unsigned int flagSync = 8;		          //Flag for PLL synchronization ready
 unsigned int cntSync = 0;                 //counter for PLL synchronization
+float out_vector_alpha_VSI 		= 0;
+float out_vector_beta_VSI		= 0;
+float Vdc_VSI					= 150;    // setup for DC side voltage
+float Vd_out_VSI				= 0;
+float Vq_out_VSI				= 0;
 
 //control parameters
 PIDREG3 PI_DC_I=PIDREG1_DEFAULTS;           //PI controller for DC stage battery current control
@@ -101,15 +112,87 @@ PIDREG3 PI_DC_V=PIDREG2_DEFAULTS;           //PI controller for DC stage voltage
 //display on GUI
 //float Vc_av[13]={0,0,0,0,0,0,0,0,0,0,0,0};//a set of average sensed signals and control signals
 
+//--------------PWM variable-------------------------
+float Ma						= 0;
+float Mk						= 0;
+float duration1_1 				= 0;					//for intermediate converter 1 duty cycle calculation
+float duration2_1 				= 0;					//for intermediate converter 1 duty cycle calculation
+float duration0_1 				= 0;					//for intermediate converter 1 duty cycle calculation
+int region_SVPWM_1 				= 0;					// location region of reference voltage for SVPWM
+float region_angle_SVPWM_1 		= 0;					// angle in location region of reference voltage for SVPWM
+int region_DPWM_1 				= 0;					// location region of reference voltage for DPWM
+float region_angle_DPWM_1 		= 0;					// angle in location region of reference voltage for DPWM
+float DutyA_1 					= 0;					//phase A duty cycle of converter 1
+float DutyB_1 					= 0;					//phase B duty cycle of converter 1
+float DutyC_1 					= 0;					//phase C duty cycle of converter 1
 //==============================================================================
 // Function definitions
 
+
+//EPWM parameters
+
+//Interleaving Configuration
+#define EPWM_INTER_ANGLE1 0					//Set Interleaving Angle for Converter 1, maintain zero
+#define EPWM_INTER_ANGLE2 0				//Set Interleaving Angle for Converter 2, change as needed (=interleave angle/2/pi from 0 to 0.5)
+//6.4 for no L : 0.01785714285714285714285714285714
+//13 for add L @20kHz: 0.03846153846153846153846153846154
+//16 for add L @ 25kHz: 0.04545454545454545454545454545455
+//20 for add L @ 30kHz: 0.05555555555555555555555555555556
+//25 for add L @ 40kHz: 0.07142857142857142857142857142857
+
+typedef struct
+{
+   volatile struct EPWM_REGS *EPwmRegHandle;
+   Uint16 EPwm_CMPA_Direction;
+   Uint16 EPwm_CMPB_Direction;
+   Uint16 EPwmTimerIntCount;
+   Uint16 EPwmMaxCMPA;
+   Uint16 EPwmMinCMPA;
+   Uint16 EPwmMaxCMPB;
+   Uint16 EPwmMinCMPB;
+}EPWM_INFO;
+
+//------------------------------------------Calculate Global variables based on system parameter------------------------
+#define EPWM_TIMER_TBPRD   200*1000000/2/SW_FREQ				// Calculate Period register Value (for 200MHz/DIV4)
+#define EPWM1_TIMER_TBPRD  EPWM_TIMER_TBPRD  					// send to each Period register
+#define EPWM2_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM3_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM4_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM5_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM6_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM7_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM8_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM9_TIMER_TBPRD  EPWM_TIMER_TBPRD
+#define EPWM_CMPA_INITIAL 0										//Set Initial CMPA register value
+// limitation on duty cycle minmumpuls witdth =2*DB
+#define EPWM_MAX_CMP      EPWM_TIMER_TBPRD-EPWM_DB
+#define EPWM_MIN_CMP      EPWM_DB
+// Enable/Disable PWM interupt
+#define PWM_INT_ENABLE  1
+#define PWM_INT_DISABLE  0
+// Enable/Disable PWM TZ interupt
+#define PWM_TZEINT_ENABLE  1
+#define PWM_TZEINT_DISABLE  0
+// Global variables used in this example
+Uint32  EPwm1TZIntCount;									// counter of TZ interrupt
+Uint16  TZIntCount_Statu_CBC = 0;							// TZ interrupt statues Cycle By Cycle
+Uint16  TZIntCount_Statu_OST = 0;							// TZ interrupt statues One Shot
+Uint16  EPwm_Int_Counter = 0;								// PWM interrupt counter
+Uint16  EPwm_Int_LedCounter = 0;							// PWM interrupt counter for LED indication
+// Enable/Disable PWM TZ interupt
+#define PWM_TZEINT_ENABLE  1
+#define PWM_TZEINT_DISABLE  0
+
+// indicate compare conuter direction for test
+#define EPWM_CMP_UP   1
+#define EPWM_CMP_DOWN 0
+EPWM_INFO epwm1_info;										// Information of each PWM module
 
 void main(void) {
 
     HW_init(); /* Initialize hardware*/
     control_init();//Initilize control variable and output
-
+    EPWM_init();
     EALLOW;  // This is needed to write to EALLOW protected registers
     PieVectTable.EPWM9_INT = &epwm9_timer_isr;
     EDIS;    // This is needed to disable write to EALLOW protected registers
@@ -216,6 +299,7 @@ interrupt void ctrl_isr(void)
 	ADCCalibration(); // manual calibration for ADC zero
 	control_function();
 
+
 //==============================================================================
 
 	DINT;  // Disable global interrupt
@@ -251,7 +335,7 @@ void control_init(void)
 	HW_sync_init(&syn);
 
 	VI_S.Ia1=0;VI_S.Ib1=0;VI_S.Ic1=0;                //Sensed data initilization
-	VI_S.Vab1=0;VI_S.Vbc1=0;
+	VI_S.Vab1=0;VI_S.Vbc1=0;VI_S.Vca1=0;
 	VI_S.Vdcp=0;VI_S.Vdcn=0;
 	VI_S.VBa=0;VI_S.IBa=0;
 	VI_S.Ia2=0;VI_S.Ib2=0;VI_S.Ic2=0;
@@ -261,6 +345,223 @@ void control_init(void)
 	CPLD_NO_FAULT_SET;                   //clear DSP set error
 	CPLD_FAULT_CLR;
 }
+
+void EPWM_init(void)
+{
+   EALLOW;
+   EPwm1Regs.TZSEL.bit.OSHT1 = 1;
+   EPwm1Regs.TZSEL.bit.CBC2 = 1;
+
+   // What do we want the TZ1 and TZ2 to do?
+   EPwm1Regs.TZCTL.bit.TZA = TZ_FORCE_LO;
+   EPwm1Regs.TZCTL.bit.TZB = TZ_FORCE_LO;
+
+  // Enable TZ interrupt, Both OSHT and CBC will trigger the interupt, read TZFLG register in interupt
+   EPwm1Regs.TZEINT.bit.OST = PWM_TZEINT_ENABLE;
+   EPwm1Regs.TZEINT.bit.CBC = PWM_TZEINT_ENABLE;
+//   EDIS;
+
+   // Setup Sync
+
+   EPwm1Regs.TBPRD = EPWM1_TIMER_TBPRD;                        // Set timer period
+
+   EPwm1Regs.TBCTR = 0x0000;                      // Clear counter
+
+   // Setup TBCLK
+   EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO;  // Generate SYNC for other chanel signal when CTR=0
+   EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up-down
+   EPwm1Regs.TBCTL.bit.PHSEN = TB_ENABLE;        // Enable phase loading
+   EPwm1Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;           // Phase is 0
+   EPwm1Regs.TBCTL.bit.PHSDIR = TB_UP;
+   EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+   EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+   EPwm1Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+
+   EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
+   EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+   EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
+   EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO;
+
+   // Setup compare
+   EPwm1Regs.CMPA.half.CMPA = EPWM_CMPA_INITIAL;
+
+   // Set actions
+   EPwm1Regs.AQCTLA.bit.CAU = AQ_CLEAR;             // Set PWM1A on Zero
+   EPwm1Regs.AQCTLA.bit.CAD = AQ_SET;
+
+
+   EPwm1Regs.AQCTLB.bit.CAU = AQ_CLEAR;          // Set PWM1B on Zero
+   EPwm1Regs.AQCTLB.bit.CAD = AQ_SET;
+
+   // Active Low PWMs - Setup Deadband
+   EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
+   EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;
+   EPwm1Regs.DBCTL.bit.IN_MODE = DBA_ALL;
+   EPwm1Regs.DBRED = EPWM_DB;
+   EPwm1Regs.DBFED = EPWM_DB;
+
+
+   // Interrupt where we update the compare value
+   EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;     // Select INT on Zero event
+   EPwm1Regs.ETSEL.bit.INTEN = PWM_INT_ENABLE;                // Enable INT
+   EPwm1Regs.ETPS.bit.INTPRD = ET_1ST;           // Generate INT on 1st event
+
+   epwm1_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA &
+   epwm1_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // decreasing CMPB
+   epwm1_info.EPwmTimerIntCount = 0;               // Zero the interrupt counter
+   epwm1_info.EPwmRegHandle = &EPwm1Regs;          // Set the pointer to the ePWM module
+   epwm1_info.EPwmMaxCMPA = EPWM_MAX_CMP;        // Setup min/max CMPA/CMPB values
+   epwm1_info.EPwmMinCMPA = EPWM_MIN_CMP;
+   epwm1_info.EPwmMaxCMPB = EPWM_MAX_CMP;
+   epwm1_info.EPwmMinCMPB = EPWM_MIN_CMP;
+
+//   EPwm1Regs.ETSEL.bit.SOCAEN = 0x1;   			// Enable extsoc1a event
+//  EPwm1Regs.ETSEL.bit.SOCASEL = 0x1;  			// Set event to happen on TBCTR = TBPRD
+//   EPwm1Regs.ETPS.bit.SOCAPRD = 0x1;   			// Generate SoC on first event
+
+   EPwm1Regs.ETSEL.bit.SOCBEN = 0x1;   			// Enable extsoc1b event
+   EPwm1Regs.ETSEL.bit.SOCBSEL = 0x1;  			// Set event to happen on TBCTR = TBPRD
+   EPwm1Regs.ETPS.bit.SOCBPRD = 0x1;   			// Generate SoC on first event
+	// Enable extsoc1B set polarity
+   SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1BEN = 0x1;     // Enable extsoc1b
+   SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1BPOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
+//   SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1AEN = 0x1;     // Enable extsoc1a
+//   SysCtrlRegs.EXTSOCCFG.bit.EXTSOC1APOLSEL= 0x1;  // Set inverted polarity (CONVST is active low)
+   // Setup SOCADCCLK to run at 25Mhz
+   SysCtrlRegs.HISPCP.bit.HSPCLK = 0x3;			// HSPCLK=SYSCLKOUT/8 (25Mhz)
+
+//------------------------------------------------------------Initial EPWM2 Module---------------------------------------------------
+
+   EPwm2Regs.TZSEL.bit.OSHT1 = 1;
+   EPwm2Regs.TZSEL.bit.CBC2 = 1;
+
+   // What do we want the TZ1 and TZ2 to do?
+   EPwm2Regs.TZCTL.bit.TZA = TZ_FORCE_LO;
+   EPwm2Regs.TZCTL.bit.TZB = TZ_FORCE_LO;
+
+   // Enable TZ interrupt
+//   EPwm2Regs.TZEINT.bit.OST = PWM_TZEINT_DISABLE;
+//   EPwm2Regs.TZEINT.bit.CBC = PWM_TZEINT_DISABLE;
+
+
+
+
+   EPwm2Regs.TBPRD = EPWM2_TIMER_TBPRD;                        // Set timer period
+   EPwm2Regs.TBCTR = 0x0000;                      // Clear counter
+
+   // Setup TBCLK
+   EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN;  // Pass through
+   EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+   EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE;
+   EPwm2Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;           // Phase is 0
+   EPwm2Regs.TBCTL.bit.PHSDIR = TB_UP;
+   EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+   EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;          // Slow just to observe on the scope
+   EPwm2Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+   // Setup compare
+   EPwm2Regs.CMPA.half.CMPA = EPWM_CMPA_INITIAL;
+
+   EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
+   EPwm2Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+   EPwm2Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
+   EPwm2Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO;
+
+   // Set actions
+   EPwm2Regs.AQCTLA.bit.CAU = AQ_CLEAR;             // Set PWM2A on Zero
+   EPwm2Regs.AQCTLA.bit.CAD = AQ_SET;
+   EPwm2Regs.AQCTLB.bit.CAU = AQ_CLEAR;           // Set PWM2A on Zero
+   EPwm2Regs.AQCTLB.bit.CAD = AQ_SET;
+
+   // Active Low complementary PWMs - setup the deadband
+   EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
+   EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;
+   EPwm2Regs.DBCTL.bit.IN_MODE = DBA_ALL;
+   EPwm2Regs.DBRED = EPWM_DB;
+   EPwm2Regs.DBFED = EPWM_DB;
+
+
+   // Interrupt where we will modify the deadband
+   EPwm2Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;      // Select INT on Zero event
+   EPwm2Regs.ETSEL.bit.INTEN = PWM_INT_DISABLE;   // Disable INT
+   EPwm2Regs.ETPS.bit.INTPRD = ET_1ST;            // Generate INT on 1rd event
+
+
+//   epwm2_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA &
+//   epwm2_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // decreasing CMPB
+//   epwm2_info.EPwmTimerIntCount = 0;               // Zero the interrupt counter
+//   epwm2_info.EPwmRegHandle = &EPwm3Regs;          // Set the pointer to the ePWM module
+//   epwm2_info.EPwmMaxCMPA = EPWM3_MAX_CMPA;        // Setup min/max CMPA/CMPB values
+//   epwm2_info.EPwmMinCMPA = EPWM3_MIN_CMPA;
+//   epwm2_info.EPwmMaxCMPB = EPWM3_MAX_CMPB;
+//   epwm2_info.EPwmMinCMPB = EPWM3_MIN_CMPB;
+
+//------------------------------------------------------------Initial EPWM3 Module---------------------------------------------------
+
+   EPwm3Regs.TZSEL.bit.OSHT1 = 1;
+   EPwm3Regs.TZSEL.bit.CBC2 = 1;
+
+   // What do we want the TZ1 and TZ2 to do?
+   EPwm3Regs.TZCTL.bit.TZA = TZ_FORCE_LO;
+   EPwm3Regs.TZCTL.bit.TZB = TZ_FORCE_LO;
+
+   // Enable TZ interrupt
+//   EPwm3Regs.TZEINT.bit.OST = PWM_TZEINT_DISABLE;
+//   EPwm3Regs.TZEINT.bit.CBC = PWM_TZEINT_DISABLE;
+
+
+   EPwm3Regs.TBPRD = EPWM3_TIMER_TBPRD;            // Set timer period=2*TBPRD*TBCLK
+
+   EPwm3Regs.TBCTR = 0x0000;                       // Clear counter
+
+   // Setup TBCLK
+   EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN;  // Pass through
+   EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up-down
+   EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE;        // Enable phase loading
+   EPwm3Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;            // Phase is 0
+   EPwm3Regs.TBCTL.bit.PHSDIR = TB_UP;
+   EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT TBCLK=SYSCLKOUT/HSPCLKDIV/CLKDIV
+   EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;          // Slow so we can observe on the scope
+   EPwm3Regs.TBCTL.bit.PRDLD = TB_SHADOW;
+   // Setup compare
+   EPwm3Regs.CMPA.half.CMPA = EPWM_CMPA_INITIAL;
+
+   EPwm3Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
+   EPwm3Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
+   EPwm3Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
+   EPwm3Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO;
+
+   // Set actions
+   EPwm3Regs.AQCTLA.bit.CAU = AQ_CLEAR ;              // Set PWM3A on Zero
+   EPwm3Regs.AQCTLA.bit.CAD = AQ_SET;
+   EPwm3Regs.AQCTLB.bit.CAU = AQ_CLEAR;            // Set PWM3A on Zero
+   EPwm3Regs.AQCTLB.bit.CAD = AQ_SET;
+
+   // Active high complementary PWMs - Setup the deadband
+   EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
+   EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;
+   EPwm3Regs.DBCTL.bit.IN_MODE = DBA_ALL;
+   EPwm3Regs.DBRED = EPWM_DB;
+   EPwm3Regs.DBFED = EPWM_DB;
+
+
+   // Interrupt where we will change the deadband
+   EPwm3Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;       // Select INT on Zero event
+   EPwm3Regs.ETSEL.bit.INTEN = PWM_INT_DISABLE;   // Disable INT
+   EPwm3Regs.ETPS.bit.INTPRD = ET_1ST;             // Generate INT on 3rd event
+
+   EDIS;
+//   epwm3_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA &
+//   epwm3_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // decreasing CMPB
+//   epwm3_info.EPwmTimerIntCount = 0;               // Zero the interrupt counter
+//   epwm3_info.EPwmRegHandle = &EPwm3Regs;          // Set the pointer to the ePWM module
+//   epwm3_info.EPwmMaxCMPA = EPWM3_MAX_CMPA;        // Setup min/max CMPA/CMPB values
+//   epwm3_info.EPwmMinCMPA = EPWM3_MIN_CMPA;
+//   epwm3_info.EPwmMaxCMPB = EPWM3_MAX_CMPB;
+//   epwm3_info.EPwmMinCMPB = EPWM3_MIN_CMPB;
+
+}
+
+
 
 void HW_op(void)                                     //Process off/pre-charge/rectifier/discharge operation mode
 {
@@ -308,20 +609,23 @@ void control_function(void)
 //		else
 //		{}
 //
-//		HW_pll(&syn,VI_C.Vq);                        //calculate PLL
-//		syn.theta = syn.theta>=2*PI ? syn.theta-2*PI : syn.theta; //theta should be within [0,2*PI]
-//		syn.theta = syn.theta<=0 ? syn.theta+2*PI : syn.theta;
+		HW_pll(&syn,VI_C.Vq);                        //calculate PLL
+		syn.theta = syn.theta>=2*PI ? syn.theta-2*PI : syn.theta; //theta should be within [0,2*PI]
+		syn.theta = syn.theta<=0 ? syn.theta+2*PI : syn.theta;
 //
 		theta=syn.theta;                             //use angle from PLL
 		sintheta=sin(theta);
 		costheta=cos(theta);
 //
-		VI_C.Valpha=(VI_S.Vab-VI_S.Vbc*0.5-VI_S.Vca*0.5)*SQRT2OVER3; //calculate dq frame phase voltage using line-line voltage
-		VI_C.Vbeta =SQRT3_2*(VI_S.Vbc- VI_S.Vca)*SQRT2OVER3;
+		VI_S.Vca1=-VI_S.Vab1-VI_S.Vbc1;
+		VI_C.Valpha=(VI_S.Vab1-VI_S.Vbc1*0.5-VI_S.Vca1*0.5)*SQRT2OVER3; //calculate dq frame phase voltage using line-line voltage
+		VI_C.Vbeta =SQRT3_2*(VI_S.Vbc1- VI_S.Vca1)*SQRT2OVER3;
 		VI_C.Vd    =(costheta*VI_C.Valpha+sintheta*VI_C.Vbeta)*DIV1_SQRT3;
 		VI_C.Vq    =(-sintheta*VI_C.Valpha+costheta*VI_C.Vbeta)*DIV1_SQRT3;
 //	}
 
+// manual controlled by DIPSwitch SW1 on control board
+// GPIO84 = SW1.pin1; GPIO85 = SW1.pin2; GPIO86 = SW1.pin3; GPIO87 = SW1.pin4
     if (GpioDataRegs.GPCDAT.bit.GPIO84 == 1) //if current loop closed
     {
     	PI_DC_I.Fdb=VI_S.IBa;PI_DC_I.calc(&PI_DC_I);      //calculate DC stage battery current control command
@@ -343,15 +647,22 @@ void control_function(void)
     }
 
     //For Buck Operation
-    Duty_Ratio[6][0]=0.5+PI_DC_I.Out+PI_DC_V.Out;
-	Duty_Ratio[6][1]=0.5+PI_DC_I.Out-PI_DC_V.Out;
+    Duty_Ratio[6][0]=0.25+PI_DC_I.Out+PI_DC_V.Out;
+	Duty_Ratio[6][1]=0.25+PI_DC_I.Out-PI_DC_V.Out;
 
     //For Boost Operation
 //    Duty_Ratio[6][0]=0.675+PI_DC_I.Out-PI_DC_V.Out;
 //	  Duty_Ratio[6][1]=0.675+PI_DC_I.Out+PI_DC_V.Out;
 
-	update_D();
+	Vd_out_VSI = 99.6;
+	Vq_out_VSI = 0;
 
+	//update_D();       // original pwm update in UPS
+
+	O_loop_VSI();
+	// open loop VSI
+	SVM();
+	update_compare_PWM1(DutyA_1, DutyB_1, DutyC_1);
 
 //  For communication, leave it here
 //	counter_4++;                                     //update time counter for average calculation
@@ -405,7 +716,6 @@ void update_D(void)
 		D[n][1]=Duty_Ratio[n][1]*SW_PRD_HALF;
 		n++;
 	}
-
 	update_PWM();
 }
 
@@ -434,3 +744,215 @@ void update_PWM(void)
 	EPwm7Regs.CMPB =D[6][1];
 }
 
+void O_loop_VSI(void)
+{
+	out_vector_alpha_VSI = costheta*Vd_out_VSI-costheta*Vq_out_VSI;
+	out_vector_beta_VSI	= sintheta*Vd_out_VSI+sintheta*Vq_out_VSI;
+
+	Ma = out_vector_alpha_VSI*SQRT3over2/Vdc_VSI;
+	Mk = out_vector_beta_VSI*SQRT1over2/Vdc_VSI;
+}
+
+
+void SVM(void)
+{
+//	switch (PWM_Mode)
+//	{
+//		case 1:						// center aligned continious PWM
+//		{
+			/*deterimine the region and the phase_angle in the region for SVPWM*/
+			/*     010    110
+					|_  II _|
+				 III  |___|	 I
+			  011_______|________100
+					   _|_
+				 IV  _|	  |_ VI
+					|   V   |
+				   001     101
+			*/
+
+			// find the section
+			if (Ma > 0)
+			{
+				if (Mk > 0)
+				{
+					if (Ma > Mk)
+					{
+						region_SVPWM_1	= 1;
+						duration1_1		= Ma-Mk;
+						duration2_1		= 2*Mk;
+					}
+					else
+					{
+						region_SVPWM_1	= 2;
+						duration1_1		= Ma+Mk;
+						duration2_1		= -Ma+Mk;
+					}
+				}
+				else
+					{
+						if (Ma > -Mk)
+						{
+							region_SVPWM_1	= 6;
+							duration1_1		= -2*Mk;
+							duration2_1		= Ma+Mk;
+						}
+						else
+						{
+							region_SVPWM_1	= 5;
+							duration1_1		= -Ma-Mk;
+							duration2_1		= Ma-Mk;
+						}
+					}
+			}
+			else
+			{
+				if (Mk > 0)
+				{
+					if (-Ma > Mk)
+					{
+						region_SVPWM_1	= 3;
+						duration1_1		= 2*Mk;
+						duration2_1		= -Ma-Mk;
+					}
+					else
+					{
+						region_SVPWM_1	= 2;
+						duration1_1		= Ma+Mk;
+						duration2_1		= -Ma+Mk;
+					}
+				}
+				else
+				{
+					if (Ma < Mk)
+					{
+						region_SVPWM_1	= 4;
+						duration1_1		= -Ma+Mk;
+						duration2_1		= -2*Mk;
+					}
+					else
+					{
+						region_SVPWM_1	= 5;
+						duration1_1		= -Ma-Mk;
+						duration2_1		= Ma-Mk;
+					}
+				}
+			}
+
+			duration0_1=1-duration1_1-duration2_1;
+
+			//calculate duty cycle based on location of output vector
+			switch (region_SVPWM_1)
+			{
+				case 1:
+				{
+					DutyA_1=1-duration0_1/2;
+					DutyB_1=duration2_1+duration0_1/2;
+					DutyC_1=duration0_1/2;
+					break;
+				}
+				case 2:
+				{
+					DutyA_1=duration1_1+duration0_1/2;
+					DutyB_1=1-duration0_1/2;
+					DutyC_1=duration0_1/2;
+					break;
+				}
+				case 3:
+				{
+					DutyA_1=duration0_1/2;
+					DutyB_1=1-duration0_1/2;
+					DutyC_1=duration2_1+duration0_1/2;
+					break;
+				}
+				case  4:
+				{
+					DutyA_1=duration0_1/2;
+					DutyB_1=duration1_1+duration0_1/2;
+					DutyC_1=1-duration0_1/2;
+					break;
+				}
+				case  5:
+				{
+					DutyA_1=duration2_1+duration0_1/2;
+					DutyB_1=duration0_1/2;
+					DutyC_1=1-duration0_1/2;
+					break;
+				}
+				case 6:
+				{
+					DutyA_1=1-duration0_1/2;
+					DutyB_1=duration0_1/2;
+					DutyC_1=duration1_1+duration0_1/2;
+					break;
+				}
+			}
+}
+
+
+void update_compare_PWM1(float DutyA_1, float DutyB_1, float DutyC_1)
+{
+   int CMP_Origin_A, CMP_Origin_B, CMP_Origin_C;
+   CMP_Origin_A=DutyA_1*EPWM1_TIMER_TBPRD;
+   CMP_Origin_B=DutyB_1*EPWM1_TIMER_TBPRD;
+   CMP_Origin_C=DutyC_1*EPWM1_TIMER_TBPRD;
+
+
+   	EPwm1Regs.CMPA.half.CMPA = D[0][0];              //update output PWM duty ratio
+   	EPwm1Regs.CMPB =D[0][1];
+
+   if (CMP_Origin_A > EPWM_MAX_CMP)
+   {
+//   		EPwm1Regs.CMPA.half.CMPA=EPWM_MAX_CMP;
+   		EPwm1Regs.CMPA.half.CMPA=EPWM1_TIMER_TBPRD;
+   }
+   else
+   {
+   		if (CMP_Origin_A < EPWM_MIN_CMP)
+   		{
+//   			EPwm1Regs.CMPA.half.CMPA=EPWM_MIN_CMP;
+				EPwm1Regs.CMPA.half.CMPA=0;
+   		}
+   		else
+   		{
+   			EPwm1Regs.CMPA.half.CMPA=CMP_Origin_A;
+   		}
+   }
+   if (CMP_Origin_B > EPWM_MAX_CMP)
+   {
+//   		EPwm2Regs.CMPA.half.CMPA=EPWM_MAX_CMP;
+   		EPwm2Regs.CMPA.half.CMPA=EPWM1_TIMER_TBPRD;
+   }
+   else
+   {
+   		if (CMP_Origin_B < EPWM_MIN_CMP)
+   		{
+//   			EPwm2Regs.CMPA.half.CMPA=EPWM_MIN_CMP;
+   			EPwm2Regs.CMPA.half.CMPA=0;
+   		}
+   		else
+   		{
+   			EPwm2Regs.CMPA.half.CMPA=CMP_Origin_B;
+   		}
+   }
+   if (CMP_Origin_C > EPWM_MAX_CMP)
+   {
+//   		EPwm3Regs.CMPA.half.CMPA=EPWM_MAX_CMP;
+   		EPwm3Regs.CMPA.half.CMPA=EPWM1_TIMER_TBPRD;
+   }
+   else
+   {
+   		if (CMP_Origin_C < EPWM_MIN_CMP)
+   		{
+//   			EPwm3Regs.CMPA.half.CMPA=EPWM_MIN_CMP;
+   			EPwm3Regs.CMPA.half.CMPA=0;
+
+   		}
+   		else
+   		{
+   			EPwm3Regs.CMPA.half.CMPA=CMP_Origin_C;
+   		}
+   }
+   return;
+}
+//========================================================Update PWM1 CMP Register value end========================================================
