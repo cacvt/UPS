@@ -153,8 +153,8 @@ typedef struct
 }EPWM_INFO;
 
 //------------------------------------------Calculate Global variables based on system parameter------------------------
-#define EPWM_TIMER_TBPRD   200*1000000/2/SW_FREQ				// Calculate Period register Value (for 200MHz/DIV4)
-#define EPWM1_TIMER_TBPRD  EPWM_TIMER_TBPRD  					// send to each Period register
+#define EPWM_TIMER_TBPRD   200*1000000/2/SW_FREQ	// Calculate Period register Value (for 200MHz/DIV4)
+#define EPWM1_TIMER_TBPRD  EPWM_TIMER_TBPRD  		// send to each Period register
 #define EPWM2_TIMER_TBPRD  EPWM_TIMER_TBPRD
 #define EPWM3_TIMER_TBPRD  EPWM_TIMER_TBPRD
 #define EPWM4_TIMER_TBPRD  EPWM_TIMER_TBPRD
@@ -284,9 +284,9 @@ interrupt void ctrl_isr(void)
 	PROFILE_ISR_START
 	;
 	// Execution time monitoring
-	IER = M_INT2 | M_INT3;					// Trip zone interrupt for protect-
-											//   -ion & PWM update ISR to update
-											//   PWM registers
+	IER = M_INT2 | M_INT3;			// Trip zone interrupt for protect-
+									//   -ion & PWM update ISR to update
+									//   PWM registers
 	EINT;
 	// Re-enable high level interrupts
 	tick++;								    // increase time tick for LED display
@@ -298,7 +298,6 @@ interrupt void ctrl_isr(void)
 	Sample_Data();  // load and calibrate ADC data into VI_S
 	ADCCalibration(); // manual calibration for ADC zero
 	control_function();
-
 
 //==============================================================================
 
@@ -349,63 +348,52 @@ void control_init(void)
 void EPWM_init(void)
 {
    EALLOW;
-   EPwm1Regs.TZSEL.bit.OSHT1 = 1;
-   EPwm1Regs.TZSEL.bit.CBC2 = 1;
+   EPwm1Regs.TZSEL.bit.OSHT1 = 1; // one-shot trip, set trip pin TZ1 (GPIO12)
+   EPwm1Regs.TZSEL.bit.CBC2 = 1;  // Cycle-by-Cycle for current limit, , set trip pin TZ2 (GPIO13)
 
    // What do we want the TZ1 and TZ2 to do?
-   EPwm1Regs.TZCTL.bit.TZA = TZ_FORCE_LO;
-   EPwm1Regs.TZCTL.bit.TZB = TZ_FORCE_LO;
+   EPwm1Regs.TZCTL.bit.TZA = TZ_FORCE_LO;  // when trip, pull low on PWMA
+   EPwm1Regs.TZCTL.bit.TZB = TZ_FORCE_LO;  // when trip, pull low on PWMB
 
-  // Enable TZ interrupt, Both OSHT and CBC will trigger the interupt, read TZFLG register in interupt
+  // Enable TZ interrupt, Both OSHT and CBC will trigger the interrupt, read TZFLG register in interrupt
    EPwm1Regs.TZEINT.bit.OST = PWM_TZEINT_ENABLE;
    EPwm1Regs.TZEINT.bit.CBC = PWM_TZEINT_ENABLE;
 //   EDIS;
 
    // Setup Sync
 
-   EPwm1Regs.TBPRD = EPWM1_TIMER_TBPRD;                        // Set timer period
-
+   EPwm1Regs.TBPRD = EPWM1_TIMER_TBPRD;           // Set timer period = 66.7 us
    EPwm1Regs.TBCTR = 0x0000;                      // Clear counter
-
    // Setup TBCLK
-   EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO;  // Generate SYNC for other chanel signal when CTR=0
+   EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO;  // Generate SYNC for other channel signal when CTR=0
    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up-down
    EPwm1Regs.TBCTL.bit.PHSEN = TB_ENABLE;        // Enable phase loading
-   EPwm1Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;           // Phase is 0
+   EPwm1Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;      // Phase is 0
    EPwm1Regs.TBCTL.bit.PHSDIR = TB_UP;
    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
-   EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
+   EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;		  //TBCLK = SYSCLKOUT/1
    EPwm1Regs.TBCTL.bit.PRDLD = TB_SHADOW;
-
    EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
    EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
-   EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;
-   EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO;
-
+   EPwm1Regs.CMPCTL.bit.LOADAMODE = CC_CTR_ZERO;	 // load on CTR=Zero
+   EPwm1Regs.CMPCTL.bit.LOADBMODE = CC_CTR_ZERO;	 // load on CTR=Zero
    // Setup compare
    EPwm1Regs.CMPA.half.CMPA = EPWM_CMPA_INITIAL;
-
    // Set actions
    EPwm1Regs.AQCTLA.bit.CAU = AQ_CLEAR;             // Set PWM1A on Zero
    EPwm1Regs.AQCTLA.bit.CAD = AQ_SET;
-
-
    EPwm1Regs.AQCTLB.bit.CAU = AQ_CLEAR;          // Set PWM1B on Zero
    EPwm1Regs.AQCTLB.bit.CAD = AQ_SET;
-
    // Active Low PWMs - Setup Deadband
    EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
-   EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;
+   EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_LOC; // Active LO complementary
    EPwm1Regs.DBCTL.bit.IN_MODE = DBA_ALL;
    EPwm1Regs.DBRED = EPWM_DB;
-   EPwm1Regs.DBFED = EPWM_DB;
-
-
+   EPwm1Regs.DBFED = EPWM_DB;		//EPWM_DB*TBCLK = 1us
    // Interrupt where we update the compare value
    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;     // Select INT on Zero event
    EPwm1Regs.ETSEL.bit.INTEN = PWM_INT_ENABLE;                // Enable INT
    EPwm1Regs.ETPS.bit.INTPRD = ET_1ST;           // Generate INT on 1st event
-
    epwm1_info.EPwm_CMPA_Direction = EPWM_CMP_UP;   // Start by increasing CMPA &
    epwm1_info.EPwm_CMPB_Direction = EPWM_CMP_DOWN; // decreasing CMPB
    epwm1_info.EPwmTimerIntCount = 0;               // Zero the interrupt counter
@@ -414,11 +402,9 @@ void EPWM_init(void)
    epwm1_info.EPwmMinCMPA = EPWM_MIN_CMP;
    epwm1_info.EPwmMaxCMPB = EPWM_MAX_CMP;
    epwm1_info.EPwmMinCMPB = EPWM_MIN_CMP;
-
 //   EPwm1Regs.ETSEL.bit.SOCAEN = 0x1;   			// Enable extsoc1a event
 //  EPwm1Regs.ETSEL.bit.SOCASEL = 0x1;  			// Set event to happen on TBCTR = TBPRD
 //   EPwm1Regs.ETPS.bit.SOCAPRD = 0x1;   			// Generate SoC on first event
-
    EPwm1Regs.ETSEL.bit.SOCBEN = 0x1;   			// Enable extsoc1b event
    EPwm1Regs.ETSEL.bit.SOCBSEL = 0x1;  			// Set event to happen on TBCTR = TBPRD
    EPwm1Regs.ETPS.bit.SOCBPRD = 0x1;   			// Generate SoC on first event
@@ -431,29 +417,21 @@ void EPWM_init(void)
    SysCtrlRegs.HISPCP.bit.HSPCLK = 0x3;			// HSPCLK=SYSCLKOUT/8 (25Mhz)
 
 //------------------------------------------------------------Initial EPWM2 Module---------------------------------------------------
-
    EPwm2Regs.TZSEL.bit.OSHT1 = 1;
    EPwm2Regs.TZSEL.bit.CBC2 = 1;
-
-   // What do we want the TZ1 and TZ2 to do?
+// What do we want the TZ1 and TZ2 to do?
    EPwm2Regs.TZCTL.bit.TZA = TZ_FORCE_LO;
    EPwm2Regs.TZCTL.bit.TZB = TZ_FORCE_LO;
-
-   // Enable TZ interrupt
+// Enable TZ interrupt
 //   EPwm2Regs.TZEINT.bit.OST = PWM_TZEINT_DISABLE;
 //   EPwm2Regs.TZEINT.bit.CBC = PWM_TZEINT_DISABLE;
-
-
-
-
    EPwm2Regs.TBPRD = EPWM2_TIMER_TBPRD;                        // Set timer period
    EPwm2Regs.TBCTR = 0x0000;                      // Clear counter
-
    // Setup TBCLK
    EPwm2Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN;  // Pass through
    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
    EPwm2Regs.TBCTL.bit.PHSEN = TB_ENABLE;
-   EPwm2Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;           // Phase is 0
+   EPwm2Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;    // Phase is 0
    EPwm2Regs.TBCTL.bit.PHSDIR = TB_UP;
    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV1;          // Slow just to observe on the scope
@@ -474,7 +452,7 @@ void EPWM_init(void)
 
    // Active Low complementary PWMs - setup the deadband
    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
-   EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;
+   EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_LOC; // Active LO complementary
    EPwm2Regs.DBCTL.bit.IN_MODE = DBA_ALL;
    EPwm2Regs.DBRED = EPWM_DB;
    EPwm2Regs.DBFED = EPWM_DB;
@@ -517,7 +495,7 @@ void EPWM_init(void)
    EPwm3Regs.TBCTL.bit.SYNCOSEL = TB_SYNC_IN;  // Pass through
    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up-down
    EPwm3Regs.TBCTL.bit.PHSEN = TB_ENABLE;        // Enable phase loading
-   EPwm3Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;            // Phase is 0
+   EPwm3Regs.TBPHS.half.TBPHS = EPWM_TIMER_TBPRD*EPWM_INTER_ANGLE1;   // Phase is 0
    EPwm3Regs.TBCTL.bit.PHSDIR = TB_UP;
    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT TBCLK=SYSCLKOUT/HSPCLKDIV/CLKDIV
    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV1;          // Slow so we can observe on the scope
@@ -538,7 +516,7 @@ void EPWM_init(void)
 
    // Active high complementary PWMs - Setup the deadband
    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
-   EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;
+   EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_LOC; // Active LO complementary
    EPwm3Regs.DBCTL.bit.IN_MODE = DBA_ALL;
    EPwm3Regs.DBRED = EPWM_DB;
    EPwm3Regs.DBFED = EPWM_DB;
