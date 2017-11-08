@@ -240,22 +240,27 @@ void PWM_Regs_Conf(volatile struct EPWM_REGS *pPwmReg, Uint16 nPer, Uint32 nShif
     pPwmReg->AQCTLB.bit.CBU = AQ_CLEAR;         // Set zero when counter increases
 
     // Setup Deadband
-    pPwmReg->DBCTL.bit.OUT_MODE = 0x0;         // Disabled
+    //pPwmReg->DBCTL.bit.OUT_MODE = 0x0;         // Disabled deadband, instead imp. in CPLD
+    pPwmReg->DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;  // enable deadtime
+    pPwmReg->DBCTL.bit.POLSEL = DB_ACTV_LOC; // Active LO complementary
+    pPwmReg->DBCTL.bit.IN_MODE = DBA_ALL;  //take EPWM for DB from EPWMA
+    pPwmReg->DBRED = EPWM_DB;
+    pPwmReg->DBFED = EPWM_DB;             //EPWM_DB*TBCLK = 1us
 
+    // Setup Interrupt event
     pPwmReg->ETSEL.bit.SOCASEL = ET_CTR_ZERO;
-    pPwmReg->ETSEL.bit.SOCBSEL = ET_CTR_ZERO;//ET_CTR_PRD
+    pPwmReg->ETSEL.bit.SOCBSEL = ET_CTR_ZERO;    //ET_CTR_PRD
 
-    pPwmReg->ETPS.bit.SOCAPRD = ET_1ST;
-    pPwmReg->ETPS.bit.SOCBPRD = ET_1ST;
-
+    pPwmReg->ETPS.bit.SOCAPRD = ET_1ST;           // Generate SOCA on 1st event
+    pPwmReg->ETPS.bit.SOCBPRD = ET_1ST;           // Generate SOCB on 1st event
 
     // Interrupt where we will change the Compare Values
     //pPwmReg->ETSEL.bit.INTSEL = ET_CTR_ZERO;     // Select INT on Zero event
     //pPwmReg->ETSEL.bit.INTEN = 1;                // Enable INT
-    //pPwmReg->ETPS.bit.INTPRD = ET_3RD;           // Generate INT on 3rd event
+    //pPwmReg->ETPS.bit.INTPRD = ET_1ST;           // Generate INT on 1st event
 
     if(ADC_EN == 1)
-            pPwmReg->ETSEL.all |= 0x8800;
+            pPwmReg->ETSEL.all |= 0x8800;  // x|=y  equals to x = x or y
 
 
 }
@@ -287,7 +292,7 @@ void pwm_init_regs()
 
     EPwm1Regs.TBCTL.bit.SYNCOSEL = TB_CTR_ZERO; //master
 
-
+    // EPWM9 is used as interrupt source
     PWM_Regs_Conf(&EPwm9Regs, nPer*SW_PER_SAMPLE, 0, 1);
     EPwm9Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;      // Enable INT on Zero event
     EPwm9Regs.ETSEL.bit.INTEN = 1;   // Enable INT

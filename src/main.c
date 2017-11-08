@@ -192,7 +192,7 @@ void main(void) {
 
     HW_init(); /* Initialize hardware*/
     control_init();//Initilize control variable and output
-    EPWM_init();
+//    EPWM_init();
     EALLOW;  // This is needed to write to EALLOW protected registers
     PieVectTable.EPWM9_INT = &epwm9_timer_isr;
     EDIS;    // This is needed to disable write to EALLOW protected registers
@@ -594,12 +594,13 @@ void control_function(void)
 		theta=syn.theta;                             //use angle from PLL
 		sintheta=sin(theta);
 		costheta=cos(theta);
-//
+// 		power invariant d-q frame
+
 		VI_S.Vca1=-VI_S.Vab1-VI_S.Vbc1;
 		VI_C.Valpha=(VI_S.Vab1-VI_S.Vbc1*0.5-VI_S.Vca1*0.5)*SQRT2OVER3; //calculate dq frame phase voltage using line-line voltage
 		VI_C.Vbeta =SQRT3_2*(VI_S.Vbc1- VI_S.Vca1)*SQRT2OVER3;
-		VI_C.Vd    =(costheta*VI_C.Valpha+sintheta*VI_C.Vbeta)*DIV1_SQRT3;
-		VI_C.Vq    =(-sintheta*VI_C.Valpha+costheta*VI_C.Vbeta)*DIV1_SQRT3;
+		VI_C.Vd    =(costheta*VI_C.Valpha+sintheta*VI_C.Vbeta)*DIV1_SQRT3;	   // convert into rms value
+		VI_C.Vq    =(-sintheta*VI_C.Valpha+costheta*VI_C.Vbeta)*DIV1_SQRT3;   // convert into rms value
 //	}
 
 // manual controlled by DIPSwitch SW1 on control board

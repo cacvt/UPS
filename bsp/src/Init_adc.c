@@ -124,7 +124,7 @@ void adc_init_io(void)
     /* Configure XINTF pins
      * Enable used pins only! Keep others as input!
      *  D0-D11, CS0, CS7, WE0 RD */
-    GpioCtrlRegs.GPBMUX1.all = 0x00003FC0;
+    GpioCtrlRegs.GPBMUX1.all = 0x00003FC0;  // 0011 1111 1100
     GpioCtrlRegs.GPCMUX1.all = 0xAAAAAA00;
 
     /* Disable pull-ups on used XINTF control pins */
