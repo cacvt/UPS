@@ -10,4 +10,5 @@
 	<rts value="libc.a"/>
 	<templateProperties value="id=com.ti.common.project.core.emptyProjectWithMainTemplate,"/>
 	<isTargetManual value="false"/>
+	<origin value="C:/Users/cacee14/workspace_v6_2/10kW_UPS_remote"/>
 </projectOptions>
