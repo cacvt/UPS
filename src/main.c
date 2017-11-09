@@ -93,10 +93,21 @@ unsigned int flagSync = 8;		          //Flag for PLL synchronization ready
 unsigned int cntSync = 0;                 //counter for PLL synchronization
 float out_vector_alpha_VSI 		= 0;
 float out_vector_beta_VSI		= 0;
-float Vdc_VSI					= 150;    // setup for DC side voltage
+float Vdc_VSI					= 60;    // setup for DC side voltage
 float Vd_out_VSI				= 0;
 float Vq_out_VSI				= 0;
+//float sensor1_Ia_average 		=0;
+//float sensor1_Ib_average 		=0;
+//float sensor1_Ic_average 		=0;
+//float sensor1_Vab_average 		=0;
+//float sensor1_Vbc_average 		=0;
 
+//float sensor1_Ia_total 		=0;
+//float sensor1_Ib_total 		=0;
+//float sensor1_Ic_total 		=0;
+//float sensor1_Vab_total 		=0;
+//float sensor1_Vbc_total 		=0;
+//int32 sensor1_cnt = 0;
 //control parameters
 PIDREG3 PI_DC_I=PIDREG1_DEFAULTS;           //PI controller for DC stage battery current control
 PIDREG3 PI_DC_V=PIDREG2_DEFAULTS;           //PI controller for DC stage voltage balancing control
@@ -296,7 +307,38 @@ interrupt void ctrl_isr(void)
 // User code begin
 
 	Sample_Data();  // load and calibrate ADC data into VI_S
-	ADCCalibration(); // manual calibration for ADC zero
+	//ADCCalibration(); // manual calibration for ADC zero
+    //----------------ADC calibration for ManualZERO purpose-----------------
+    // revised by Chien-An
+//    if (sensor1_cnt <= 500)
+//   {
+
+//    	sensor1_Ia_total = sensor1_Ia_total + VI_S.Ia1;
+//    	sensor1_Ib_total = sensor1_Ib_total + VI_S.Ib1;
+//     	sensor1_Ic_total = sensor1_Ic_total + VI_S.Ic1;
+//    	sensor1_Vab_total = sensor1_Vab_total + VI_S.Vab1;
+//    	sensor1_Vbc_total = sensor1_Vbc_total + VI_S.Vbc1;
+
+    	//sensor1_cnt++;
+    //}
+    //else
+    //{
+    	//sensor1_Ia_average = sensor1_Ia_total * 0.002;
+    	//sensor1_Ib_average = sensor1_Ib_total * 0.002;
+    	//sensor1_Ic_average = sensor1_Ic_total * 0.002;
+    	//sensor1_Vab_average = sensor1_Vab_total * 0.002;
+     	//sensor1_Vbc_average = sensor1_Vbc_total * 0.002;
+
+    	//sensor1_cnt = 0;
+
+    	//sensor1_Ia_total = 0;
+    	//sensor1_Ib_total = 0;
+    	//sensor1_Ic_total = 0;
+    	//sensor1_Vab_total = 0;
+    	//sensor1_Vbc_total = 0;
+    //}
+    //----------------ADC calibration-----------------
+
 	control_function();
 
 //==============================================================================
@@ -597,10 +639,25 @@ void control_function(void)
 // 		power invariant d-q frame
 
 		VI_S.Vca1=-VI_S.Vab1-VI_S.Vbc1;
-		VI_C.Valpha=(VI_S.Vab1-VI_S.Vbc1*0.5-VI_S.Vca1*0.5)*SQRT2OVER3; //calculate dq frame phase voltage using line-line voltage
-		VI_C.Vbeta =SQRT3_2*(VI_S.Vbc1- VI_S.Vca1)*SQRT2OVER3;
-		VI_C.Vd    =(costheta*VI_C.Valpha+sintheta*VI_C.Vbeta)*DIV1_SQRT3;	   // convert into rms value
-		VI_C.Vq    =(-sintheta*VI_C.Valpha+costheta*VI_C.Vbeta)*DIV1_SQRT3;   // convert into rms value
+//		VI_C.Valpha=(VI_S.Vab1-VI_S.Vbc1*0.5-VI_S.Vca1*0.5)*SQRT2OVER3; //calculate dq frame phase voltage using line-line voltage
+//		VI_C.Vbeta =SQRT3_2*(VI_S.Vbc1- VI_S.Vca1)*SQRT2OVER3;
+//		VI_C.Vd    =(costheta*VI_C.Valpha+sintheta*VI_C.Vbeta)*DIV1_SQRT3;	   // convert into rms value
+//		VI_C.Vq    =(-sintheta*VI_C.Valpha+costheta*VI_C.Vbeta)*DIV1_SQRT3;   // convert into rms value
+
+		VI_C.Ialpha=(VI_S.Ia1-VI_S.Ib1*0.5-VI_S.Ic1*0.5)*SQRT2OVER3; //calculate dq frame phase voltage using line-line voltage
+		VI_C.Ibeta =SQRT3_2*(VI_S.Ib1- VI_S.Ic1)*SQRT2OVER3;
+		VI_C.Id    =(costheta*VI_C.Ialpha+sintheta*VI_C.Ibeta)*DIV1_SQRT3;	   // convert into rms value
+		VI_C.Iq    =(-sintheta*VI_C.Ialpha+costheta*VI_C.Ibeta)*DIV1_SQRT3;   // convert into rms value
+
+		VI_C.Van=DIV1_3*(VI_S.Vab1-VI_S.Vca1);
+		VI_C.Vbn=DIV1_3*(VI_S.Vbc1-VI_S.Vab1);
+		VI_C.Vcn=DIV1_3*(VI_S.Vca1-VI_S.Vbc1);
+		VI_C.Valpha=(VI_C.Van-VI_C.Vbn*0.5-VI_C.Vcn*0.5)*SQRT2OVER3; //calculate dq frame phase voltage using line-line voltage
+		VI_C.Vbeta =SQRT3_2*(VI_C.Vbn- VI_C.Vcn)*SQRT2OVER3;
+		VI_C.Vd    =(costheta*VI_C.Valpha+sintheta*VI_C.Vbeta);	   // convert into rms value
+		VI_C.Vq    =(-sintheta*VI_C.Valpha+costheta*VI_C.Vbeta);   // convert into rms value
+
+
 //	}
 
 // manual controlled by DIPSwitch SW1 on control board
@@ -633,7 +690,7 @@ void control_function(void)
 //    Duty_Ratio[6][0]=0.675+PI_DC_I.Out-PI_DC_V.Out;
 //	  Duty_Ratio[6][1]=0.675+PI_DC_I.Out+PI_DC_V.Out;
 
-	Vd_out_VSI = 99.6;
+	Vd_out_VSI = 40;
 	Vq_out_VSI = 0;
 
 	//update_D();       // original pwm update in UPS

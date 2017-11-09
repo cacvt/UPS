@@ -22,9 +22,9 @@ const float Vab_ADCgain= 333;
 const float Vbc_ADCgain= 333; //1/0.15/2/0.01 = 333.03
 const float Vab_ADCOS= -2.2; //-1.538;
 const float Vbc_ADCOS= -1.2025; //-3.923;
-const float Ia_ADCOS= -0.375462; //-1.7;
-const float Ib_ADCOS= 0.651456; //-1.3401;
-const float Ic_ADCOS= 0.205137; //-0.8659;
+const float Ia_ADCOS= 0.0268609; //-1.7;
+const float Ib_ADCOS= 0.304100515; //-1.3401;
+const float Ic_ADCOS= 0.401628912; //-0.8659;
 //----------ADC calibration-------------------
 // revised by Ming Lu
 int32 sensor_cnt;
