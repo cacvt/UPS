@@ -588,8 +588,8 @@ void update_PWM(void)
 
 void O_loop_VSI(void)
 {
-	out_vector_alpha_VSI = costheta*Vd_out_VSI-costheta*Vq_out_VSI;
-	out_vector_beta_VSI	= sintheta*Vd_out_VSI+sintheta*Vq_out_VSI;
+	out_vector_alpha_VSI = costheta*Vd_out_VSI-sintheta*Vq_out_VSI;
+	out_vector_beta_VSI	= sintheta*Vd_out_VSI+costheta*Vq_out_VSI;
 
 	Ma = out_vector_alpha_VSI*SQRT3over2/Vdc_VSI;
 	Mk = out_vector_beta_VSI*SQRT1over2/Vdc_VSI;
