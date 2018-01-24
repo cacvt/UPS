@@ -44,6 +44,7 @@ void init_D(void);
 void update_D(void);
 void update_PWM(void);
 void SVM(void);
+void I_loop_VSI(void);
 void O_loop_VSI(void);
 void update_compare_PWM1(float DutyA_1, float DutyB_1, float DutyC_1);
 
@@ -91,11 +92,37 @@ struct SYNC syn;                          //PLL
 unsigned int startsync = 0;               //Flag for start PLL
 unsigned int flagSync = 8;		          //Flag for PLL synchronization ready
 unsigned int cntSync = 0;                 //counter for PLL synchronization
+
+unsigned int EXSW_CTRL = 0;                 //Control signal from external switch, input from IO85_D
+unsigned int SSR_CTRL = 0;                 //Control signal from DSP to SSR, output to IO87_D
+unsigned int CPLD_ERRCLR = 0;				// Clear error in CPLD, output to IO14_D
+unsigned int CPLD_ERRSET = 0;				// Clear error in CPLD, output to IO14_D
+unsigned int CPLD_ERR = 0;					// error signal from CPLD, input from IO15_D
+
+
 float out_vector_alpha_VSI 		= 0;
 float out_vector_beta_VSI		= 0;
-float Vdc_VSI					= 60;    // setup for DC side voltage
-float Vd_out_VSI				= 0;
+float Vdc_VSI					= 80;    // setup for DC side voltage
+float Vd_out_VSI				= 40;
 float Vq_out_VSI				= 0;
+
+// control variables
+float Vd_out_VSI_S				= 0;
+float Vq_out_VSI_S				= 0;
+float delta_id_antiwind_VSI		= 0;
+float delta_iq_antiwind_VSI		= 0;
+float Ka						= 1;
+float In_uq_VSI					= 0;
+float In_ud_VSI					= 0;
+float Kii_VSI					= -122.7;
+float Kpi_VSI					= -0.0604;
+float Tsw_VSI					= CTRL_CLK;
+float idslop_VSI				= 0;
+float iqslop_VSI				= 0;
+float idref_VSI					= -1;
+float iqref_VSI					= 0;
+
+
 //float sensor1_Ia_average 		=0;
 //float sensor1_Ib_average 		=0;
 //float sensor1_Ic_average 		=0;
@@ -107,7 +134,7 @@ float Vq_out_VSI				= 0;
 //float sensor1_Ic_total 		=0;
 //float sensor1_Vab_total 		=0;
 //float sensor1_Vbc_total 		=0;
-//int32 sensor1_cnt = 0;
+int32 sensor1_cnt = 0;
 //control parameters
 PIDREG3 PI_DC_I=PIDREG1_DEFAULTS;           //PI controller for DC stage battery current control
 PIDREG3 PI_DC_V=PIDREG2_DEFAULTS;           //PI controller for DC stage voltage balancing control
@@ -222,6 +249,7 @@ void main(void) {
 	ethernet_tick=0;
 
 	EINT;
+	CPLD_FAULT_CLR;
 	main_loop(); /* Start the super loop */
 
 }
@@ -261,7 +289,7 @@ void main_loop(void) {
 		//=========================================================================
 		// Operation mode processing task
 		HW_op();
-		CPLD_FAULT_CLR;
+		//CPLD_FAULT_CLR;
 
 		//=========================================================================
 		// HEX LED update blinking task
@@ -384,7 +412,7 @@ void control_init(void)
 	//RELAY_PRE;                                       //connect DC source for pre-charge
 
 	CPLD_NO_FAULT_SET;                   //clear DSP set error
-	CPLD_FAULT_CLR;
+	//CPLD_FAULT_CLR;
 }
 
 
@@ -463,8 +491,31 @@ void control_function(void)
 		VI_C.Vd    =(costheta*VI_C.Valpha+sintheta*VI_C.Vbeta);	   // convert into rms value
 		VI_C.Vq    =(-sintheta*VI_C.Valpha+costheta*VI_C.Vbeta);   // convert into rms value
 
+		VI_C.Vdtt = VI_C.Vdtt + VI_C.Vd;
+		VI_C.Vqtt = VI_C.Vqtt + VI_C.Vq;
+
+		VI_C.Idtt = VI_C.Idtt + VI_C.Id;
+		VI_C.Iqtt = VI_C.Iqtt + VI_C.Iq;
+
+		if (sensor1_cnt++>=500)
+		{
+			VI_C.Vdavg = VI_C.Vdtt*0.002;
+			VI_C.Vqavg = VI_C.Vqtt*0.002;
+			VI_C.Idavg = VI_C.Idtt*0.002;
+			VI_C.Iqavg = VI_C.Iqtt*0.002;
+			VI_C.Vdtt=0;VI_C.Vqtt=0;VI_C.Idtt=0;VI_C.Iqtt=0;
+			sensor1_cnt=0;
+		}
+		else
+		{
+		}
 
 //	}
+		EXSW_CTRL = GpioDataRegs.GPCDAT.bit.GPIO85;
+		CPLD_ERR = GpioDataRegs.GPBDAT.bit.GPIO62;
+		GpioDataRegs.GPCDAT.bit.GPIO87 = SSR_CTRL;
+		GpioDataRegs.GPADAT.bit.GPIO14 = CPLD_ERRSET;
+		GpioDataRegs.GPADAT.bit.GPIO15 = CPLD_ERRCLR;
 
 // manual controlled by DIPSwitch SW1 on control board
 // GPIO84 = SW1.pin1; GPIO85 = SW1.pin2; GPIO86 = SW1.pin3; GPIO87 = SW1.pin4
@@ -474,8 +525,8 @@ void control_function(void)
     }
     else
     {
-    	PI_DC_I.Ui=0;                        //reset controller
-    	PI_DC_I.Out=0;
+    	PI_DC_I.Ui=0;	//reset controller //PID integral output
+    	PI_DC_I.Out=0;	//PID output
     }
 
     if (GpioDataRegs.GPCDAT.bit.GPIO85 == 1) //if voltage loop closed
@@ -489,19 +540,27 @@ void control_function(void)
     }
 
     //For Buck Operation
-    Duty_Ratio[6][0]=0.25+PI_DC_I.Out+PI_DC_V.Out;
-	Duty_Ratio[6][1]=0.25+PI_DC_I.Out-PI_DC_V.Out;
+//    Duty_Ratio[6][0]=0.25+PI_DC_I.Out+PI_DC_V.Out;
+//		Duty_Ratio[6][1]=0.25+PI_DC_I.Out-PI_DC_V.Out;
 
     //For Boost Operation
 //    Duty_Ratio[6][0]=0.675+PI_DC_I.Out-PI_DC_V.Out;
 //	  Duty_Ratio[6][1]=0.675+PI_DC_I.Out+PI_DC_V.Out;
 
-	Vd_out_VSI = 40;
-	Vq_out_VSI = 0;
+	//Vd_out_VSI = 40;
+	//Vq_out_VSI = 0;
 
 	//update_D();       // original pwm update in UPS
 
+	//I_loop_VSI();
+    if (EXSW_CTRL==0)
+    {
 	O_loop_VSI();
+    }
+    else
+    {
+    I_loop_VSI();
+    }
 	// open loop VSI
 	SVM();
 	update_compare_PWM1(DutyA_1, DutyB_1, DutyC_1);
@@ -584,6 +643,66 @@ void update_PWM(void)
 
 	EPwm7Regs.CMPA.half.CMPA = D[6][0];
 	EPwm7Regs.CMPB =D[6][1];
+}
+
+
+void I_loop_VSI(void)
+{
+	delta_id_antiwind_VSI = Ka*(Vd_out_VSI_S-Vd_out_VSI);
+	delta_iq_antiwind_VSI = Ka*(Vq_out_VSI_S-Vq_out_VSI);
+
+	idslop_VSI				= idref_VSI;
+	iqslop_VSI				= iqref_VSI;
+	In_ud_VSI				= In_ud_VSI+Kii_VSI*(idslop_VSI-VI_C.Id-delta_id_antiwind_VSI)*Tsw_VSI;
+	In_uq_VSI				= In_uq_VSI+Kii_VSI*(iqslop_VSI-VI_C.Iq-delta_iq_antiwind_VSI)*Tsw_VSI;
+//	Vd_out_VSI				= K_decoup_VSI*Two_PI*f_line*Lout_VSI*Iq_VSI+Kpi_VSI*(idslop_VSI-Id_VSI)+In_ud_VSI;
+	Vd_out_VSI				= Kpi_VSI*(idslop_VSI-VI_C.Id)+In_ud_VSI;
+//	Vq_out_VSI				= -K_decoup_VSI*Two_PI*f_line*Lout_VSI*Id_VSI+Kpi_VSI*(iqslop_VSI-Iq_VSI)+In_uq_VSI;
+	Vq_out_VSI				= Kpi_VSI*(iqslop_VSI-VI_C.Iq)+In_uq_VSI;
+
+	if (Vd_out_VSI< -Vdc_VSI)
+	{
+		Vd_out_VSI_S = -Vdc_VSI;
+	}
+	else
+	{
+		if (Vd_out_VSI> Vdc_VSI)
+		{
+		Vd_out_VSI_S = Vdc_VSI;
+		}
+		else
+		{
+			Vd_out_VSI_S = Vd_out_VSI;
+		}
+	}
+	if (Vq_out_VSI< -Vdc_VSI)
+	{
+		Vq_out_VSI_S = -Vdc_VSI;
+	}
+	else
+	{
+		if (Vq_out_VSI> Vdc_VSI)
+		{
+		Vq_out_VSI_S = Vdc_VSI;
+		}
+		else
+		{
+			Vq_out_VSI_S = Vq_out_VSI;
+		}
+	}
+
+	out_vector_alpha_VSI	= costheta*Vd_out_VSI_S-sintheta*Vq_out_VSI_S;
+	out_vector_beta_VSI		= sintheta*Vd_out_VSI_S+costheta*Vq_out_VSI_S;
+	Ma						= out_vector_alpha_VSI*SQRT3over2/Vdc_VSI;							// Valpha*sqrt(3/2)/Vdc
+	Mk						= out_vector_beta_VSI*SQRT1over2/Vdc_VSI;							// Vbeta*sqrt(3/2)/Vdc/sqrt(3)
+
+//	output_vector_angle_2	= atan2(out_vector_beta_VSI, out_vector_alpha_VSI);
+
+//	if(output_vector_angle_2<0)
+//	{
+//		output_vector_angle_2=output_vector_angle_2+2*PI;
+//	}
+
 }
 
 void O_loop_VSI(void)

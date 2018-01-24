@@ -28,6 +28,7 @@ typedef struct	//sampled data: 6 cap voltage, 6 arm current						--Jianghui
 	float Vdcn;		//DC bus voltage, negative
 	float VBa;		//Battery voltage
 	float IBa;		//Battery current
+	float Tc;		//case Temperature
 	float Ia2;		//output AC current, phase A
 	float Ib2;		//output AC current, phase B
 	float Ic2;		//output AC current, phase C

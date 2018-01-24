@@ -108,6 +108,11 @@ void HW_cpld_init(void)
 	GpioCtrlRegs.GPBPUD.bit.GPIO48 = 1;		// Disable pull-up to save power
 	GpioDataRegs.GPBSET.bit.GPIO48 = 1;
 
+	GpioCtrlRegs.GPBMUX2.bit.GPIO62 = 0;	// GPIO62 as IO
+	GpioCtrlRegs.GPBDIR.bit.GPIO62 = 0;		// As input for CPLD error
+	GpioCtrlRegs.GPBPUD.bit.GPIO62 = 1;		// Disable pull-up to save power
+
+
 	GpioCtrlRegs.GPAMUX1.bit.GPIO14 = 0;    // GPIO14 is err set pin
     GpioCtrlRegs.GPADIR.bit.GPIO14 = 1;     // As output
     GpioCtrlRegs.GPAPUD.bit.GPIO14 = 1;     // Disable pull-up to save power
@@ -121,7 +126,7 @@ void HW_cpld_init(void)
     GpioCtrlRegs.GPCPUD.bit.GPIO84 = 1;     // Disable pull-up to save power
 
 	GpioCtrlRegs.GPCMUX2.bit.GPIO85 = 0;    // GPIO85
-    GpioCtrlRegs.GPCDIR.bit.GPIO85 = 1;     // As output
+    GpioCtrlRegs.GPCDIR.bit.GPIO85 = 0;     // As input
     GpioCtrlRegs.GPCPUD.bit.GPIO85 = 1;     // Disable pull-up to save power
 
 	GpioCtrlRegs.GPCMUX2.bit.GPIO86 = 0;    // GPIO86

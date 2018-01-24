@@ -41,13 +41,21 @@ typedef struct	//calculated data: 3 average voltage, 3 circulating current, 3 ac
 	float Ibeta;        //beta axis current
 	float Id;           //d axis current
 	float Iq;           //q axis current
+	float Idavg;           //d axis current
+	float Iqavg;           //q axis current
+	float Idtt;           //d axis current
+	float Iqtt;           //q axis curren
 	float Van;       //an axis voltage
 	float Vbn;        //bn axis voltage
 	float Vcn;        //cn axis voltage
 	float Valpha;       //alpha axis voltage
 	float Vbeta;        //beta axis voltage
 	float Vd;           //d axis voltage
+	float Vdavg;           //d axis voltage
 	float Vq;           //q axis voltage
+	float Vqavg;           //d axis voltage
+	float Vdtt;           //d axis current
+	float Vqtt;           //q axis curren
 } CALCULATE_DATA;
 
 #endif

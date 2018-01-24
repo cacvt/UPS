@@ -4,27 +4,46 @@
 //   ADC functions function file
 //   Sense voltage and current from 12 original channels
 
-// Modified by Ming Lu, 06/09/2017
-// Sense voltage and current from 5 original channels
+// Modified by ChienAn, 01/04/2017
+// Sense voltage and current from 9 original channels
 
 #include "device.h"
 #include "hw_adc_constants.h"
 #include <Init_adc.h>
 #include <Func_adc.h>
+#include <math.h>
 
 void HW_adc_scale(void);
 
 const float Curr_lpnum=8;
-const float Ia_ADCgain= -137.4987;
-const float Ib_ADCgain= -138.105;
-const float Ic_ADCgain= -138.36; // 1/0.15/1.65/0.03 = 134.68
+const float Ia_ADCgain= 133.8;
+const float Ib_ADCgain= 133.8;
+const float Ic_ADCgain= 133.8;
+const float IBa_ADCgain= 133.8;
 const float Vab_ADCgain= 333;
+const float Vca_ADCgain= 333;
 const float Vbc_ADCgain= 333; //1/0.15/2/0.01 = 333.03
-const float Vab_ADCOS= -2.2; //-1.538;
-const float Vbc_ADCOS= -1.2025; //-3.923;
-const float Ia_ADCOS= 0.0268609; //-1.7;
-const float Ib_ADCOS= 0.304100515; //-1.3401;
-const float Ic_ADCOS= 0.401628912; //-0.8659;
+const float VBa_ADCgain= 333;
+const float Tc_ADCgain= 1;
+const float Tc1= 298.15;
+const float Tck= 273.15;
+const float RT1= 10000;
+const float BValue= 3380;
+const float Tcc_a= 813;
+const float Tcc_b= -0.1962;
+const float Tcc_c= 164.6;
+float RT2=10000;
+float ADC_A3 = 0;
+const float A3_ADCOS = -0.01;
+const float Vab_ADCOS= -2.2+1.3597; //-1.538;
+const float Vca_ADCOS= -1.2025+2.465; //-3.923;
+const float Vbc_ADCOS= -1.2025-0.17539; //-3.923;
+const float VBa_ADCOS= -1.2025+0.4119; //-3.923;
+const float Ia_ADCOS= 0.0268609-0.4147; //-1.7;
+const float Ib_ADCOS= 0.304100515-0.8199; //-1.3401;
+const float Ic_ADCOS= 0.401628912-0.545; //-0.8659;
+const float IBa_ADCOS= 0.401628912-0.4288; //-0.8659;
+const float Tc_ADCOS= 0.401628912; //-0.8659;
 //----------ADC calibration-------------------
 // revised by Ming Lu
 int32 sensor_cnt;
@@ -38,11 +57,20 @@ float sensor_Ib_average;
 float sensor_Ic_total;
 float sensor_Ic_average;
 
+float sensor_IBa_total;
+float sensor_IBa_average;
+
 float sensor_Vab_total;
 float sensor_Vab_average;
 
 float sensor_Vbc_total;
 float sensor_Vbc_average;
+
+float sensor_Vca_total;
+float sensor_Vca_average;
+
+float sensor_VBa_total;
+float sensor_VBa_average;
 //----------ADC calibration-------------------
 
 void ADCCalibration()
@@ -56,9 +84,12 @@ void ADCCalibration()
     	sensor_Ia_total = sensor_Ia_total + VI_S.Ia1;
     	sensor_Ib_total = sensor_Ib_total + VI_S.Ib1;
      	sensor_Ic_total = sensor_Ic_total + VI_S.Ic1;
+     	sensor_IBa_total = sensor_IBa_total + VI_S.IBa;
+
     	sensor_Vab_total = sensor_Vab_total + VI_S.Vab1;
     	sensor_Vbc_total = sensor_Vbc_total + VI_S.Vbc1;
-
+    	sensor_Vca_total = sensor_Vca_total + VI_S.Vca1;
+    	sensor_VBa_total = sensor_VBa_total + VI_S.VBa;
     	sensor_cnt++;
     }
     else
@@ -66,16 +97,22 @@ void ADCCalibration()
     	sensor_Ia_average = sensor_Ia_total * 0.002;
     	sensor_Ib_average = sensor_Ib_total * 0.002;
     	sensor_Ic_average = sensor_Ic_total * 0.002;
+    	sensor_IBa_average = sensor_IBa_total * 0.002;
     	sensor_Vab_average = sensor_Vab_total * 0.002;
      	sensor_Vbc_average = sensor_Vbc_total * 0.002;
-
+     	sensor_Vca_average = sensor_Vca_total * 0.002;
+     	sensor_VBa_average = sensor_VBa_total * 0.002;
     	sensor_cnt = 0;
 
     	sensor_Ia_total = 0;
     	sensor_Ib_total = 0;
     	sensor_Ic_total = 0;
+    	sensor_IBa_total = 0;
+
     	sensor_Vab_total = 0;
     	sensor_Vbc_total = 0;
+    	sensor_Vca_total = 0;
+    	sensor_VBa_total = 0;
     }
     //----------------ADC calibration-----------------
 
@@ -105,11 +142,17 @@ void Sample_Data()
 
 
 
-	VI_S.Ia1=(adc_val[0][5])*Ia_ADCgain-Ia_ADCOS;
+	VI_S.Ia1=(adc_val[1][5])*Ia_ADCgain-Ia_ADCOS;
 	VI_S.Ib1=(adc_val[1][4])*Ib_ADCgain-Ib_ADCOS;
-	VI_S.Ic1=(adc_val[1][5])*Ic_ADCgain-Ic_ADCOS;
-	VI_S.Vab1=(adc_val[1][3])*Vab_ADCgain-Vab_ADCOS;
-	VI_S.Vbc1=(adc_val[0][4])*Vbc_ADCgain-Vbc_ADCOS;
+	VI_S.Ic1=(adc_val[0][5])*Ic_ADCgain-Ic_ADCOS;
+	VI_S.IBa=(adc_val[0][4])*IBa_ADCgain-IBa_ADCOS;
+	ADC_A3=adc_val[0][3]+A3_ADCOS;
+	RT2=(ADC_A3)*960/(1.5-ADC_A3);
+	VI_S.Tc=Tcc_a*powf(RT2,Tcc_b)+Tcc_c-Tck;
+	VI_S.VBa=(adc_val[1][3])*VBa_ADCgain-VBa_ADCOS;
+	VI_S.Vab1=(adc_val[0][2])*Vab_ADCgain-Vab_ADCOS;
+	VI_S.Vca1=-(adc_val[1][1])*Vca_ADCgain-Vca_ADCOS;
+	VI_S.Vbc1=(adc_val[1][0])*Vbc_ADCgain-Vbc_ADCOS;
 
 	//VI_S.Ic1 = ((float)(adc_res[1][5]<<4)- ADC_OS[1][5])*ADC_FS[1][5];
 	//VI_S.Ia1=adc_val[0][0]*15.41+0.326;

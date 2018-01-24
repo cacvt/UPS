@@ -193,7 +193,7 @@ void pwm_init_io()
 ////	GpioCtrlRegs.GPBPUD.bit.GPIO60 = 1;			// ePWM8A
 ////	GpioCtrlRegs.GPBPUD.bit.GPIO61 = 1;			// ePWM8B
 
-	GpioCtrlRegs.GPBDIR.bit.GPIO62 = 1;         // As output
+//	GpioCtrlRegs.GPBDIR.bit.GPIO62 = 1;         // As output
 	GpioCtrlRegs.GPBDIR.bit.GPIO63 = 1;         // As output
 	//GpioCtrlRegs.GPBPUD.bit.GPIO62 = 1;         // ePWM9A
 	//GpioCtrlRegs.GPBPUD.bit.GPIO63 = 1;         // ePWM9A

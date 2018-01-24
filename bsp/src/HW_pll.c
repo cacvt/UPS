@@ -18,6 +18,7 @@
  ******************************************************************************/
 // Control parameters in s domain
 const float Kp = 0.05/Vc*300, Ki = 10/Vc*300;
+//const float Kp = 12.38, Ki = 1645;
 
 // States
 float Sum_vq = 0;
@@ -38,7 +39,7 @@ void HW_sync_init(struct SYNC *syn) {
 
 void HW_pll(struct SYNC *syn, float vq) {
 	Sum_vq += vq;
-	//syn->omega = Kp*vq + Ki*CTRL_CLK*Sum_vq;
-	syn->omega = 2*PI*fline*1;       // keep constant speed for Standalone Inverter , VSI test
+	syn->omega = Kp*vq + Ki*CTRL_CLK*Sum_vq;
+//	syn->omega = 2*PI*fline*1;       // keep constant speed for Standalone Inverter , VSI test
 	syn->theta += syn->omega*CTRL_CLK;
 }
